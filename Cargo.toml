@@ -1,0 +1,15 @@
+[package]
+name = "sworkstyle"
+version = "0.1.0"
+authors = ["Lyr-7D1h <lyr-7d1h@pm.me>"]
+edition = "2018"
+license = "MIT"
+description = "Workspaces with the swayest style!\n\nThis program will dynamically rename your workspaces to indicate which programs are running in each workspace. It uses the Sway IPC. In the absence of a config file, one will be generated automatically.\nSee ${XDG_CONFIG_HOME}/workstyle/config.yml for  details."
+
+
+[dependencies]
+swayipc-async = "2.0.0-alpha.2"
+tokio = { version = "0.3.2", features = ["rt-multi-thread", "macros"] }
+futures-util = "0.3.7"
+toml = "0.5.8"
+dirs = "3.0"

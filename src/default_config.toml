@@ -1,0 +1,37 @@
+# Config for workstyle
+#
+# Format:
+# "pattern" = "icon"
+#
+# The pattern will be used to match against the application name.
+# The icon will be used to represent that application.
+#
+# Note if multiple patterns are present in the same application name,
+# precedence is given in order of apparition in this file.
+
+fallback = 'A'
+
+[exact]
+"termite" = ""
+# "github" = ""
+# "rust" = ""
+# "google" = ""
+# "private browsing" = ""
+"firefox" = ""
+# "chrome" = ""
+# "file manager" = ""
+# "libreoffice calc" = ""
+# "libreoffice writer" = ""
+# "libreoffice" = ""
+# "nvim" = ""
+# "gthumb" = ""
+# "menu" = ""
+# "calculator" = ""
+# "transmission" = ""
+# "videostream" = ""
+# "mpv" = ""
+
+[generic]
+".pdf" = ""
+# "music" = ""
+# "disk usage" = ""
