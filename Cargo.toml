@@ -1,6 +1,6 @@
 [package]
 name = "sworkstyle"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Lyr-7D1h <lyr-7d1h@pm.me>"]
 edition = "2018"
 license = "MIT"
@@ -8,8 +8,10 @@ description = "Workspaces with the swayest style!\n\nThis program will dynamical
 
 
 [dependencies]
-swayipc-async = "2.0.0-alpha.2"
-tokio = { version = "0.3.2", features = ["rt-multi-thread", "macros"] }
+swayipc = { version = "2", features = ["async", "event_stream"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 futures-util = "0.3.7"
 toml = "0.5.8"
 dirs = "3.0"
+simple_logger = "1"
+log = "0.4"

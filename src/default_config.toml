@@ -1,37 +1,37 @@
-# Config for workstyle
+# Config for sworkstyle
 #
-# Format:
-# "pattern" = "icon"
+# You can rename workspaces based on the exact application names or by pattern.
+# When it could not match anything it will use the fallback.
 #
-# The pattern will be used to match against the application name.
-# The icon will be used to represent that application.
+# format:
 #
-# Note if multiple patterns are present in the same application name,
-# precedence is given in order of apparition in this file.
+#   [exact]
+#   "app_name" = "icon"
+#
+#   [generic]
+#   "pattern" = "icon"
+#
+# You can find "app_name" and "title" in the output of "sworkstyle"
+# If it couldn't match something it will print:
+# 
+# WARN | No match for "app_name" with title "title" 
+#
+# You can use "title" to match using the "pattern"
+#
 
 fallback = 'A'
 
-[exact]
-"termite" = ""
-# "github" = ""
-# "rust" = ""
-# "google" = ""
-# "private browsing" = ""
+[matching]
+"tmux" = { type = "generic", value = "D" }
+"Alacritty" = ""
+"Spotify" = ""
+"github" = ""
+"rust" = ""
+"google" = ""
+"private browsing" = ""
 "firefox" = ""
-# "chrome" = ""
-# "file manager" = ""
-# "libreoffice calc" = ""
-# "libreoffice writer" = ""
-# "libreoffice" = ""
-# "nvim" = ""
-# "gthumb" = ""
-# "menu" = ""
-# "calculator" = ""
-# "transmission" = ""
-# "videostream" = ""
-# "mpv" = ""
-
-[generic]
-".pdf" = ""
-# "music" = ""
-# "disk usage" = ""
+"chrome" = ""
+"file manager" = ""
+"libreoffice calc" = ""
+"libreoffice writer" = ""
+"libreoffice" = ""

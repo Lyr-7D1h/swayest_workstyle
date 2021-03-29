@@ -1,27 +1,38 @@
 extern crate dirs;
 
 use std::{
-    collections::HashMap,
     fs::{create_dir_all, read_to_string, File},
     io::{Error, ErrorKind, Write},
     str::from_utf8,
 };
 
-use swayipc_async::Node;
+use super::util::prettify_option;
+use log::{error, info, warn};
+use swayipc::reply::Node;
 use toml::Value;
 
 #[derive(Clone)]
-struct IconMap {
-    exact: HashMap<String, String>,
-    generic: HashMap<String, String>,
-    fallback: String,
+enum MatchType {
+    Exact,
+    Generic,
+}
+#[derive(Clone)]
+struct Match {
+    pattern: String,
+    value: String,
+    match_type: MatchType,
+}
+#[derive(Clone)]
+struct MatchConfig {
+    matching: Vec<Match>, // TODO Make sure this is ordered
+    fallback: Option<String>,
 }
 
 pub struct Config {
-    icon_map: IconMap,
+    icon_map: MatchConfig,
 }
 
-const DEFAULT_CONFIG: &'static [u8; 790] = include_bytes!("default_config.toml");
+const DEFAULT_CONFIG: &'static [u8; 805] = include_bytes!("default_config.toml");
 
 /// Fetch user config content and create a config file if does not exist
 fn get_user_config_content() -> Result<String, Error> {
@@ -56,81 +67,110 @@ fn get_user_config_content() -> Result<String, Error> {
 }
 
 /// Parse toml config content to icon_map
-fn parse_content_to_icon_map(content: &String) -> Result<IconMap, Error> {
+fn parse_content_to_icon_map(content: &String) -> Result<MatchConfig, Error> {
     let map: Value = toml::from_str(content).unwrap();
 
-    let map_to_string = |k: (&String, &Value)| {
+    let map_to_match = |k: (&String, &Value)| {
         if let Some(value) = k.1.as_str() {
-            return Ok((k.0.to_string(), value.to_string()));
+            return Ok(Match {
+                pattern: k.0.to_string(),
+                value: value.to_string(),
+                match_type: MatchType::Exact,
+            });
+        }
+
+        if let Some(table) = k.1.as_table() {
+            let match_type = table
+                .get("type")
+                .ok_or(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("could not parse: {}", k.0),
+                ))?
+                .as_str()
+                .ok_or(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("value of {} is not a string", k.0),
+                ))?;
+
+            let match_type = match &match_type[..] {
+                "exact" => MatchType::Exact,
+                "generic" => MatchType::Generic,
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        format!(
+                            "Invalid match type should be exact of generic but found {}",
+                            match_type
+                        ),
+                    ))
+                }
+            };
+
+            let value = table
+                .get("value")
+                .ok_or(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("could not parse: {}", k.0),
+                ))?
+                .as_str()
+                .ok_or(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("value of {} is not a string", k.0),
+                ))?
+                .to_string();
+
+            return Ok(Match {
+                pattern: k.0.to_string(),
+                value,
+                match_type,
+            });
         }
 
         Err(Error::new(
             ErrorKind::InvalidData,
-            format!("Invalid config format: could not parse {}", k.1),
+            format!("could not parse {}", k.1),
         ))
     };
 
-    println!("{:?}", map);
     match map {
         Value::Table(root) => {
-            let exact = root
-                .get("exact")
+            let matching: Vec<Match> = root
+                .get("matching")
                 .ok_or(Error::new(
                     ErrorKind::InvalidData,
-                    "Invalid config format: exact table not found",
+                    "matching table not found",
                 ))?
                 .as_table()
                 .ok_or(Error::new(
                     ErrorKind::InvalidData,
-                    "Invalid config format: could not parse exact to table",
+                    "could not parse exact to table",
                 ))?
                 .iter()
-                .map(map_to_string)
-                .collect::<Result<Vec<(String, String)>, Error>>()?
+                .map(map_to_match)
+                .collect::<Result<Vec<Match>, Error>>()?
                 .into_iter()
                 .collect();
 
-            let generic = root
-                .get("generic")
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    "Invalid config format: generic table not found",
-                ))?
-                .as_table()
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    "Invalid config format: could not parse generic",
-                ))?
-                .iter()
-                .map(map_to_string)
-                .collect::<Result<Vec<(String, String)>, Error>>()?
-                .into_iter()
-                .collect();
-
-            let fallback: String = match root["fallback"].as_str() {
-                Some(fallback) => fallback.to_string(),
-                _ => {
-                    println!("No fallback set");
-                    "A".to_string()
+            let fallback: Option<String> = match root.get("fallback") {
+                Some(value) => {
+                    let f = value.as_str().ok_or(Error::new(
+                        ErrorKind::InvalidData,
+                        "fallback is not a string",
+                    ))?;
+                    Some(f.to_string())
                 }
+                None => None,
             };
 
-            Ok(IconMap {
-                exact,
-                generic,
-                fallback,
-            })
+            Ok(MatchConfig { matching, fallback })
         }
-        _ => Err(Error::new(
-            ErrorKind::InvalidData,
-            "Invalid config format: no root table",
-        )),
+        _ => Err(Error::new(ErrorKind::InvalidData, "no root table found")),
     }
 }
 
 impl Config {
     pub fn new() -> Result<Config, Error> {
-        let get_user_config = || -> Result<IconMap, Error> {
+        let get_user_config = || -> Result<MatchConfig, Error> {
             let content = get_user_config_content()?;
             parse_content_to_icon_map(&content)
         };
@@ -139,7 +179,8 @@ impl Config {
         let icon_map = match get_user_config() {
             Ok(im) => im,
             Err(e) => {
-                println!("{}", e);
+                error!("Invalid config format: {}", e);
+                info!("Using default config");
                 let default_content = from_utf8(DEFAULT_CONFIG)
                     .map_err(|e| {
                         Error::new(
@@ -155,32 +196,50 @@ impl Config {
         Ok(Config { icon_map })
     }
 
-    pub fn fetch_icon(&self, container: &Node) -> &String {
+    pub fn fetch_icon(&self, node: &Node) -> String {
+        let mut exact_name: Option<&String> = None;
+
         // Wayland Exact app
-        if let Some(app_id) = &container.app_id {
-            if let Some(icon) = self.icon_map.exact.get(app_id) {
-                return icon;
-            }
+        if let Some(app_id) = &node.app_id {
+            exact_name = Some(app_id);
         }
 
         // X11 Exact
-        if let Some(window_props) = &container.window_properties {
+        if let Some(window_props) = &node.window_properties {
             if let Some(class) = &window_props.class {
-                if let Some(icon) = self.icon_map.exact.get(class) {
-                    return icon;
+                exact_name = Some(class);
+            }
+        }
+
+        if let Some(exact_name) = exact_name {
+            if let Some(generic_name) = &node.name {
+                for m in &self.icon_map.matching {
+                    if let MatchType::Generic = m.match_type {
+                        if generic_name.contains(&m.pattern) {
+                            return m.value.clone();
+                        }
+                    } else if m.pattern == *exact_name {
+                        return m.value.clone();
+                    }
                 }
             }
         }
 
-        // Generic matching
-        if let Some(name) = &container.name {
-            for key in self.icon_map.generic.keys() {
-                if key.contains(name) {
-                    return self.icon_map.generic.get(name).unwrap();
-                }
+        warn!(
+            "No match for \"{}\" with title \"{}\"",
+            prettify_option(exact_name),
+            prettify_option(node.name.clone()),
+        );
+
+        match &self.icon_map.fallback {
+            Some(fallback) => {
+                info!("Using fallback: {}", fallback);
+                fallback.clone()
+            }
+            None => {
+                warn!("No fallback set using empty string");
+                String::from("")
             }
         }
-
-        return &self.icon_map.fallback;
     }
 }

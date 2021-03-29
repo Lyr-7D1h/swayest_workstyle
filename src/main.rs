@@ -1,58 +1,98 @@
-use futures_util::stream::StreamExt;
-use swayipc_async::{Connection, EventType, Fallible};
-use swayipc_async::{Event::Window, Workspace};
-
 mod args;
 mod config;
+mod util;
 
 use config::Config;
+use futures_util::StreamExt;
+use log::{debug, error};
+use swayipc::{
+    bail,
+    reply::{Event, Node},
+    Connection, EventType, Fallible,
+};
+
+async fn update_workspace_name(config: &Config, workspace: &Node) -> Fallible<()> {
+    let mut conn = Connection::new().await?;
+
+    let icons: Vec<String> = workspace
+        .nodes
+        .iter()
+        .map(|node| config.fetch_icon(node).to_string())
+        .collect();
+
+    println!("{:?}", icons);
+
+    let name = match &workspace.name {
+        Some(name) => name,
+        None => bail!("Could not get name for workspace with id: {}", workspace.id),
+    };
+
+    let index = match workspace.num {
+        Some(num) => num,
+        None => bail!("Could not fetch index for: {}", name),
+    };
+
+    let new_name = format!("{}: {} ", index, icons.join(" "));
+
+    debug!("rename workspace \"{}\" to \"{}\"", name, new_name);
+
+    conn.run_command(format!("rename workspace \"{}\" to \"{}\"", name, new_name))
+        .await?;
+
+    return Ok(());
+}
+
+fn find_node_with_id(node_id: &i64, node: Node) -> Option<Node> {
+    for node in node.nodes {
+        if node.focus.contains(node_id) {
+            return Some(node);
+        } else {
+            if let Some(n) = find_node_with_id(node_id, node) {
+                return Some(n);
+            }
+        }
+    }
+    return None;
+}
+
+async fn get_workspace_for_window(window_id: &i64) -> Fallible<Node> {
+    let mut conn = Connection::new().await?;
+
+    let tree = conn.get_tree().await?;
+
+    if let Some(workspace) = find_node_with_id(window_id, tree) {
+        return Ok(workspace);
+    }
+
+    bail!(format!("Could not find a workspace for {}", window_id))
+}
 
 async fn subscribe_to_window_events(config: Config) -> Fallible<()> {
     let mut events = Connection::new()
         .await?
-        .subscribe(&[EventType::Window])
+        .subscribe(&[EventType::Workspace, EventType::Window])
         .await?;
 
-    // #TODO Switch to workspace event instead of window
-    while let Some(event) = events.next().await {
-        if let Ok(e) = event {
-            if let Window(we) = e {
-                println!("{:?}", we.container.node_type);
-
-                let icon = config.fetch_icon(&we.container);
-
-                // #TODO ensure changes
-                let mut conn = Connection::new().await?;
-
-                let workspaces: Vec<Workspace> = conn.get_workspaces().await?;
-                let workspaces: Vec<&Workspace> = workspaces
-                    .iter()
-                    .filter(|w| {
-                        w.focus
-                            .iter()
-                            .map(|k| *k as i64)
-                            .collect::<Vec<i64>>()
-                            .contains(&we.container.id)
-                    })
-                    .collect();
-
-                if workspaces.len() > 1 {
-                    println!(
-                        "Found more than one workspace for the given icon {:?}",
-                        workspaces
-                    );
-                    continue;
-                } else if workspaces.len() == 0 {
-                    println!("No workspaces found for {:?}", we.container);
-                    continue;
+    while let Some(e) = events.next().await {
+        if let Ok(event) = e {
+            if let Event::Workspace(we) = &event {
+                debug!("Workspace update");
+                if let Some(workspace) = &we.current {
+                    if let Err(e) = update_workspace_name(&config, workspace).await {
+                        error!("{}", e)
+                    }
                 }
-
-                let name = &workspaces[0].name;
-
-                println!("{}", name);
-
-                conn.run_command(format!("rename workspace \"{}\" to \"{}\"", name, icon))
-                    .await?;
+            }
+            if let Event::Window(we) = &event {
+                match get_workspace_for_window(&we.container.id).await {
+                    Ok(workspace) => {
+                        debug!("Window update");
+                        if let Err(e) = update_workspace_name(&config, &workspace).await {
+                            error!("{}", e)
+                        }
+                    }
+                    Err(e) => error!("{}", e),
+                }
             }
         }
     }
@@ -62,7 +102,7 @@ async fn subscribe_to_window_events(config: Config) -> Fallible<()> {
 
 #[tokio::main]
 async fn main() -> Fallible<()> {
-    args::help();
+    args::setup();
 
     let config = Config::new()?;
 
