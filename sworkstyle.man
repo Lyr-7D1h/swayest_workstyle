@@ -4,13 +4,18 @@
 .SH NAME
 sworkstyle - The Swayest Workstyle 
 .SH DESCRIPTION
-Swayest Workstyle. This tool will rename workspaces to the icons configured.
+Swayest Workstyle. 
+
+This tool will rename workspaces to the icons configured.
 Config can be found in $HOME/.config/sworkstyle"
 .SH SYNOPSIS
-nuseradd [FLAGS]
+sworkstyle [FLAGS]
 .SH FLAGS
 -h, --help
-      Display a description of this program 
+      Display a description of this program.
+
+--log-level
+      Either "error", "warn", "info", "debug". Uses "warn" by default"
 .SH EXIT STATUS
 0      Successful program execution.
 

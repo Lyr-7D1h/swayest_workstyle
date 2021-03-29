@@ -12,7 +12,6 @@ pub fn setup() {
         match &arg[..] {
             "-h" | "--help" => {
                 println!("Swayest Workstyle.\nThis tool will rename workspaces to the icons configured.\nConfig can be found in $HOME/.config/sworkstyle");
-                // #TODO add verbosity
                 process::exit(0);
             }
             "--log-level" => {

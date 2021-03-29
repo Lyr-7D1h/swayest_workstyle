@@ -2,11 +2,11 @@
 
 An executable similar to [workstyle](https://github.com/pierrechevalier83/workstyle).
 
-The main difference between this and `workstyle` is that this support specific app id's and names as well instead of only generic title names.
+The main difference between this and `workstyle` is that this supports exact app names instead of only generic titles.
+
+It also supports a fallback icon for when it couldn't match an App.
 
 This ensures that icons are always valid based on the application being run instead of soly relying on application title. (Does not work well with browers, since you can type anything and it will show up in title name)
-
-Besides specific id's you can also still generate icons based on title or set a fallback icon.
 
 Your workspace shall never contain an empty icon again!
 
@@ -47,7 +47,27 @@ The main configuration consists of deciding which icons to use for which applica
 
 The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. It will be generated if missing. Read the generated file. The syntax is in TOML and should be pretty self-explanatory.
 
-When an app isn't recogised in the config, `sworkstyle` will log the application name as an error.
-Simply add that string (case insensitive) to your config file, with an icon of your choice.
+When an app isn't recogised in the config, `sworkstyle` will log the application name as a warning.
+Simply add that string to your config file, with an icon of your choice.
 
 Note that the crate [`find_unicode`](https://github.com/pierrechevalier83/find_unicode/) can help find a unicode character directly from the command line. It now supports all of nerdfonts unicode space.
+
+### Example Config
+```toml
+fallback = 'A'
+
+[matching]
+"tmux" = { type = "generic", value = "D" }
+"Alacritty" = ""
+"Spotify" = ""
+"github" = ""
+"rust" = ""
+"google" = ""
+"private browsing" = ""
+"firefox" = ""
+"chrome" = ""
+"file manager" = ""
+"libreoffice calc" = ""
+"libreoffice writer" = ""
+"libreoffice" = ""
+```
