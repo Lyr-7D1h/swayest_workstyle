@@ -7,7 +7,7 @@ use futures_util::StreamExt;
 use log::{debug, error};
 use swayipc::{
     bail,
-    reply::{Event, Node},
+    reply::{Event, Node, WindowChange},
     Connection, EventType, Fallible,
 };
 
@@ -30,7 +30,11 @@ async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallibl
         None => bail!("Could not fetch index for: {}", name),
     };
 
-    let new_name = format!("{}: {} ", index, icons.join(" "));
+    let mut icons = icons.join(" ");
+    if icons.len() > 0 {
+        icons.push_str(" ")
+    }
+    let new_name = format!("{}: {}", index, icons);
 
     debug!("rename workspace \"{}\" to \"{}\"", name, new_name);
 
@@ -82,14 +86,17 @@ async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
                 }
             }
             if let Event::Window(we) = &event {
-                match get_workspace_for_window(&we.container.id).await {
-                    Ok(workspace) => {
-                        debug!("Window update");
-                        if let Err(e) = update_workspace_name(&mut config, &workspace).await {
-                            error!("{}", e)
+                // TODO Find workspace on close
+                if WindowChange::Close != we.change {
+                    match get_workspace_for_window(&we.container.id).await {
+                        Ok(workspace) => {
+                            debug!("Window update");
+                            if let Err(e) = update_workspace_name(&mut config, &workspace).await {
+                                error!("{}", e)
+                            }
                         }
+                        Err(e) => error!("{}", e),
                     }
-                    Err(e) => error!("{}", e),
                 }
             }
         }
