@@ -62,6 +62,7 @@ fallback = 'A'
 "Spotify" = ""
 "github" = ""
 "rust" = ""
+"Code" = { type = "exact", value = "C" }
 "google" = ""
 "private browsing" = ""
 "firefox" = ""

@@ -1,22 +1,24 @@
 # Config for sworkstyle
 #
-# You can rename workspaces based on the exact application names or by pattern.
+# You can rename workspaces based on the exact application names or by generic pattern.
 # When it could not match anything it will use the fallback.
 #
 # format:
 #
-#   [exact]
-#   "app_name" = "icon"
+#   "{pattern}" = { type = "generic" | "exact", value = "{icon}" }
 #
-#   [generic]
-#   "pattern" = "icon"
+# pattern: can either be the exact app_name or a piece of text contained in the title ignoring casing.
+# icon: Your beatifull icon
 #
-# You can find "app_name" and "title" in the output of "sworkstyle"
+# You can also you the shorthand for exact matching using
+#   "{pattern}" = "{icon}"
+#
 # If it couldn't match something it will print:
 # 
-# WARN | No match for "app_name" with title "title" 
+# WARN | No match for "{app_name}" with title "{title}" 
 #
-# You can use "title" to match using the "pattern"
+# You can use {title} to do a generic matching 
+# You can use {app_name} to do a exact match
 #
 
 fallback = 'A'

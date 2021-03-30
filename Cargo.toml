@@ -10,8 +10,8 @@ description = "Workspaces with the swayest style!\n\nThis program will dynamical
 [dependencies]
 swayipc = { version = "2", features = ["async", "event_stream"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+toml = { version = "0.5.8", features = ["preserve_order"] }
 futures-util = "0.3.7"
-toml = "0.5.8"
 dirs = "3.0"
 simple_logger = "1"
 log = "0.4"

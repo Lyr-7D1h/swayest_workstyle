@@ -11,7 +11,7 @@ use swayipc::{
     Connection, EventType, Fallible,
 };
 
-async fn update_workspace_name(config: &Config, workspace: &Node) -> Fallible<()> {
+async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallible<()> {
     let mut conn = Connection::new().await?;
 
     let icons: Vec<String> = workspace
@@ -19,8 +19,6 @@ async fn update_workspace_name(config: &Config, workspace: &Node) -> Fallible<()
         .iter()
         .map(|node| config.fetch_icon(node).to_string())
         .collect();
-
-    println!("{:?}", icons);
 
     let name = match &workspace.name {
         Some(name) => name,
@@ -67,7 +65,7 @@ async fn get_workspace_for_window(window_id: &i64) -> Fallible<Node> {
     bail!(format!("Could not find a workspace for {}", window_id))
 }
 
-async fn subscribe_to_window_events(config: Config) -> Fallible<()> {
+async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
     let mut events = Connection::new()
         .await?
         .subscribe(&[EventType::Workspace, EventType::Window])
@@ -78,7 +76,7 @@ async fn subscribe_to_window_events(config: Config) -> Fallible<()> {
             if let Event::Workspace(we) = &event {
                 debug!("Workspace update");
                 if let Some(workspace) = &we.current {
-                    if let Err(e) = update_workspace_name(&config, workspace).await {
+                    if let Err(e) = update_workspace_name(&mut config, workspace).await {
                         error!("{}", e)
                     }
                 }
@@ -87,7 +85,7 @@ async fn subscribe_to_window_events(config: Config) -> Fallible<()> {
                 match get_workspace_for_window(&we.container.id).await {
                     Ok(workspace) => {
                         debug!("Window update");
-                        if let Err(e) = update_workspace_name(&config, &workspace).await {
+                        if let Err(e) = update_workspace_name(&mut config, &workspace).await {
                             error!("{}", e)
                         }
                     }
