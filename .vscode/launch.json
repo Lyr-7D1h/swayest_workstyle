@@ -1,0 +1,41 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'sworkstyle'",
+      "cargo": {
+        "args": ["build", "--bin=sworkstyle", "--package=sworkstyle"],
+        "filter": {
+          "name": "sworkstyle",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'sworkstyle'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=sworkstyle",
+          "--package=sworkstyle"
+        ],
+        "filter": {
+          "name": "sworkstyle",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

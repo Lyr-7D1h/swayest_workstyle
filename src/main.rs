@@ -7,7 +7,7 @@ use futures_util::StreamExt;
 use log::{debug, error};
 use swayipc::{
     bail,
-    reply::{Event, Node, WindowChange},
+    reply::{Node, NodeType},
     Connection, EventType, Fallible,
 };
 
@@ -34,39 +34,60 @@ async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallibl
     if icons.len() > 0 {
         icons.push_str(" ")
     }
-    let new_name = format!("{}: {}", index, icons);
 
-    debug!("rename workspace \"{}\" to \"{}\"", name, new_name);
+    let new_name = if icons.len() > 0 {
+        format!("{}: {}", index, icons)
+    } else if let Some(num) = workspace.num {
+        format!("{}", num)
+    } else {
+        error!("Could not fetch workspace num for: {:?}", workspace.name);
+        " ".to_string()
+    };
 
-    conn.run_command(format!("rename workspace \"{}\" to \"{}\"", name, new_name))
-        .await?;
+    if *name != new_name {
+        debug!("rename workspace \"{}\" to \"{}\"", name, new_name);
+
+        conn.run_command(format!("rename workspace \"{}\" to \"{}\"", name, new_name))
+            .await?;
+    }
 
     return Ok(());
 }
 
-fn find_node_with_id(node_id: &i64, node: Node) -> Option<Node> {
-    for node in node.nodes {
-        if node.focus.contains(node_id) {
+fn get_workspace_with_focus_recurse<'a>(parent: &'a Node, node: &'a Node) -> Option<&'a Node> {
+    if node.focused {
+        if node.node_type == NodeType::Workspace {
             return Some(node);
-        } else {
-            if let Some(n) = find_node_with_id(node_id, node) {
-                return Some(n);
+        } else if node.node_type == NodeType::Con {
+            // println!("{:?}", parent.nodes);
+            if parent.node_type == NodeType::Workspace {
+                return Some(parent);
             }
         }
     }
+
+    for child in &node.nodes {
+        if let Some(n) = get_workspace_with_focus_recurse(node, child) {
+            return Some(n);
+        }
+    }
+
     return None;
 }
 
-async fn get_workspace_for_window(window_id: &i64) -> Fallible<Node> {
-    let mut conn = Connection::new().await?;
-
-    let tree = conn.get_tree().await?;
-
-    if let Some(workspace) = find_node_with_id(window_id, tree) {
+async fn get_workspace_with_focus(tree: &Node) -> Fallible<&Node> {
+    if let Some(workspace) = get_workspace_with_focus_recurse(tree, tree) {
         return Ok(workspace);
     }
 
-    bail!(format!("Could not find a workspace for {}", window_id))
+    bail!(format!("Could not find a workspace with focus"))
+}
+
+async fn update_workspace(con: &mut Connection, config: &mut Config) -> Fallible<()> {
+    let tree = con.get_tree().await?;
+    let workspace = get_workspace_with_focus(&tree).await?;
+    update_workspace_name(config, workspace).await?;
+    Ok(())
 }
 
 async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
@@ -75,28 +96,14 @@ async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
         .subscribe(&[EventType::Workspace, EventType::Window])
         .await?;
 
+    let mut con = Connection::new().await?;
+
     while let Some(e) = events.next().await {
-        if let Ok(event) = e {
-            if let Event::Workspace(we) = &event {
-                debug!("Workspace update");
-                if let Some(workspace) = &we.current {
-                    if let Err(e) = update_workspace_name(&mut config, workspace).await {
-                        error!("{}", e)
-                    }
-                }
-            }
-            if let Event::Window(we) = &event {
-                // TODO Find workspace on close
-                if WindowChange::Close != we.change {
-                    match get_workspace_for_window(&we.container.id).await {
-                        Ok(workspace) => {
-                            debug!("Window update");
-                            if let Err(e) = update_workspace_name(&mut config, &workspace).await {
-                                error!("{}", e)
-                            }
-                        }
-                        Err(e) => error!("{}", e),
-                    }
+        if let Ok(_) = e {
+            match update_workspace(&mut con, &mut config).await {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("Could not update workspace name: {}", e);
                 }
             }
         }

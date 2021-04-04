@@ -24,7 +24,7 @@ struct Match {
 }
 #[derive(Clone)]
 struct MatchConfig {
-    matching: Vec<Match>, // TODO Make sure this is ordered
+    matching: Vec<Match>,
     fallback: Option<String>,
 }
 
