@@ -11,7 +11,21 @@ pub fn setup() {
     while let Some(arg) = args.next() {
         match &arg[..] {
             "-h" | "--help" => {
-                println!("Swayest Workstyle.\nThis tool will rename workspaces to the icons configured.\nConfig can be found in $HOME/.config/sworkstyle");
+                println!(
+                    "Swayest Workstyle
+This tool will rename workspaces to the icons configured.
+Config can be found in $HOME/.config/sworkstyle
+
+SYNOPSIS
+    sworkstyle [FLAGS]
+
+FLAGS
+    -h, --help
+        Display a description of this program.
+
+    --log-level
+        Either \"error\", \"warn\", \"info\", \"debug\". Uses \"warn\" by default"
+                );
                 process::exit(0);
             }
             "--log-level" => {
