@@ -1,39 +1,38 @@
 # Config for sworkstyle
 #
-# You can rename workspaces based on the exact application names or by generic pattern.
+# You can rename workspaces based on the exact application names or by pattern.
 # When it could not match anything it will use the fallback.
 #
 # format:
 #
-#   "{pattern}" = { type = "generic" | "exact", value = "{icon}" }
+#   [exact]
+#   "app_name" = "icon"
 #
-# pattern: can either be the exact app_name or a piece of text contained in the title ignoring casing.
-# icon: Your beatifull icon
+#   [generic]
+#   "pattern" = "icon"
 #
-# You can also you the shorthand for exact matching using
-#   "{pattern}" = "{icon}"
-#
+# You can find "app_name" and "title" in the output of "sworkstyle"
 # If it couldn't match something it will print:
-# 
-# WARN | No match for "{app_name}" with title "{title}" 
 #
-# You can use {title} to do a generic matching 
-# You can use {app_name} to do a exact match
+# WARN | No match for "app_name" with title "title"
+#
+# You can use "title" to match using the "pattern"
 #
 
-fallback = 'A'
+fallback = ''
 
 [matching]
-"tmux" = { type = "generic", value = "D" }
+"github" = { type = "generic", value = "" }
+"rust" = { type = "generic", value = "" }
+"vim" = { type = "generic", value = "" }
+"npm" = { type = "generic", value = "" }
+"node" = { type = "generic", value = "" }
+"yarn" = { type = "generic", value = "" }
+"thunderbird" = ""
+"Bitwarden" = ""
+"Google-chrome" = ""
+"Slack" = ""
+"Code" = ""
 "Alacritty" = ""
-"Spotify" = ""
-"github" = ""
-"rust" = ""
-"google" = ""
-"private browsing" = ""
+"Spotify" = ""
 "firefox" = ""
-"chrome" = ""
-"file manager" = ""
-"libreoffice calc" = ""
-"libreoffice writer" = ""
-"libreoffice" = ""

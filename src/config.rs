@@ -32,7 +32,7 @@ pub struct Config {
     match_config: MatchConfig,
 }
 
-const DEFAULT_CONFIG: &'static [u8; 1003] = include_bytes!("default_config.toml");
+const DEFAULT_CONFIG: &'static [u8; 935] = include_bytes!("default_config.toml");
 
 /// Fetch user config content and create a config file if does not exist
 fn get_user_config_content() -> Result<String, Error> {

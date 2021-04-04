@@ -12,8 +12,18 @@ Your workspace shall never contain an empty icon again!
 
 ## Installation
 
+### Cargo
+
 ```
 cargo install sworkstyle
+```
+
+### Arch Linux
+
+You can install it manually or use a aur helper like Yay.
+
+```
+yay -S sworkstyle
 ```
 
 ## Usage
@@ -53,22 +63,23 @@ Simply add that string to your config file, with an icon of your choice.
 Note that the crate [`find_unicode`](https://github.com/pierrechevalier83/find_unicode/) can help find a unicode character directly from the command line. It now supports all of nerdfonts unicode space.
 
 ### Example Config
+
 ```toml
-fallback = 'A'
+fallback = ''
 
 [matching]
-"tmux" = { type = "generic", value = "D" }
+"github" = { type = "generic", value = "" }
+"rust" = { type = "generic", value = "" }
+"vim" = { type = "generic", value = "" }
+"npm" = { type = "generic", value = "" }
+"node" = { type = "generic", value = "" }
+"yarn" = { type = "generic", value = "" }
+"thunderbird" = ""
+"Bitwarden" = ""
+"Google-chrome" = ""
+"Slack" = ""
+"Code" = ""
 "Alacritty" = ""
-"Spotify" = ""
-"github" = ""
-"rust" = ""
-"Code" = { type = "exact", value = "C" }
-"google" = ""
-"private browsing" = ""
+"Spotify" = ""
 "firefox" = ""
-"chrome" = ""
-"file manager" = ""
-"libreoffice calc" = ""
-"libreoffice writer" = ""
-"libreoffice" = ""
 ```
