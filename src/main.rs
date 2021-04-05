@@ -13,13 +13,27 @@ use swayipc::{
     Connection, Error, EventType, Fallible,
 };
 
+fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
+    if node.node_type == NodeType::FloatingCon || node.node_type == NodeType::Con {
+        if let Some(_) = node.name {
+            windows.push(node)
+        }
+    };
+
+    for node in &node.nodes {
+        get_windows(node, windows);
+    }
+}
+
 async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallible<()> {
     let mut conn = Connection::new().await?;
 
-    let icons: Vec<String> = workspace
-        .nodes
+    let mut windows = vec![];
+    get_windows(workspace, &mut windows);
+
+    let icons: Vec<String> = windows
         .iter()
-        .map(|node| config.fetch_icon(node).to_string())
+        .map(|node| config.fetch_icon(&node).to_string())
         .collect();
 
     let name = match &workspace.name {
