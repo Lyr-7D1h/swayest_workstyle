@@ -23,6 +23,9 @@ fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
     for node in &node.nodes {
         get_windows(node, windows);
     }
+    for node in &node.floating_nodes {
+        get_windows(node, windows)
+    }
 }
 
 async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallible<()> {
@@ -77,7 +80,7 @@ fn get_workspace_with_focus_recurse<'a>(
     if node.focused {
         if node.node_type == NodeType::Workspace {
             return Some(node);
-        } else if node.node_type == NodeType::Con {
+        } else if node.node_type == NodeType::Con || node.node_type == NodeType::FloatingCon {
             for parent in parents.iter() {
                 if parent.node_type == NodeType::Workspace {
                     return Some(parent);
@@ -86,7 +89,7 @@ fn get_workspace_with_focus_recurse<'a>(
         }
     }
 
-    for child in &node.nodes {
+    for child in node.nodes.iter().chain(node.floating_nodes.iter()) {
         parents.push_front(child);
         if let Some(n) = get_workspace_with_focus_recurse(parents, child) {
             return Some(n);
