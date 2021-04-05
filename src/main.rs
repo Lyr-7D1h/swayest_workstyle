@@ -2,6 +2,8 @@ mod args;
 mod config;
 mod util;
 
+use std::collections::VecDeque;
+
 use config::Config;
 use futures_util::StreamExt;
 use log::{debug, error};
@@ -54,29 +56,35 @@ async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallibl
     return Ok(());
 }
 
-fn get_workspace_with_focus_recurse<'a>(parent: &'a Node, node: &'a Node) -> Option<&'a Node> {
+fn get_workspace_with_focus_recurse<'a>(
+    parents: &mut VecDeque<&'a Node>,
+    node: &'a Node,
+) -> Option<&'a Node> {
     if node.focused {
         if node.node_type == NodeType::Workspace {
             return Some(node);
         } else if node.node_type == NodeType::Con {
-            // println!("{:?}", parent.nodes);
-            if parent.node_type == NodeType::Workspace {
-                return Some(parent);
+            for parent in parents.iter() {
+                if parent.node_type == NodeType::Workspace {
+                    return Some(parent);
+                }
             }
         }
     }
 
     for child in &node.nodes {
-        if let Some(n) = get_workspace_with_focus_recurse(node, child) {
+        parents.push_front(child);
+        if let Some(n) = get_workspace_with_focus_recurse(parents, child) {
             return Some(n);
         }
+        parents.pop_front();
     }
 
     return None;
 }
 
 fn get_workspace_with_focus(tree: &Node) -> Result<&Node, Error> {
-    if let Some(workspace) = get_workspace_with_focus_recurse(tree, tree) {
+    if let Some(workspace) = get_workspace_with_focus_recurse(&mut VecDeque::new(), tree) {
         return Ok(workspace);
     }
 
