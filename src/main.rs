@@ -8,7 +8,7 @@ use log::{debug, error};
 use swayipc::{
     bail,
     reply::{Node, NodeType},
-    Connection, EventType, Fallible,
+    Connection, Error, EventType, Fallible,
 };
 
 async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallible<()> {
@@ -75,17 +75,17 @@ fn get_workspace_with_focus_recurse<'a>(parent: &'a Node, node: &'a Node) -> Opt
     return None;
 }
 
-async fn get_workspace_with_focus(tree: &Node) -> Fallible<&Node> {
+fn get_workspace_with_focus(tree: &Node) -> Result<&Node, Error> {
     if let Some(workspace) = get_workspace_with_focus_recurse(tree, tree) {
         return Ok(workspace);
     }
 
-    bail!(format!("Could not find a workspace with focus"))
+    bail!("Could not find a workspace with focus")
 }
 
 async fn update_workspace(con: &mut Connection, config: &mut Config) -> Fallible<()> {
     let tree = con.get_tree().await?;
-    let workspace = get_workspace_with_focus(&tree).await?;
+    let workspace = get_workspace_with_focus(&tree)?;
     update_workspace_name(config, workspace).await?;
     Ok(())
 }
