@@ -10,6 +10,12 @@ This ensures that icons are always valid based on the application being run inst
 
 Your workspace shall never contain an empty icon again!
 
+**An example of what it does (using waybar which also hides the workspace index):**
+
+<img src="./screenshots/bar.png">
+<br />
+<img src="./screenshots/desktop.png" width="1000">
+
 ## Installation
 
 ### Cargo
