@@ -198,9 +198,6 @@ impl Config {
     }
 
     pub fn fetch_icon(&mut self, node: &Node) -> String {
-        // Ensure latest config version
-        self.update();
-
         let mut exact_name: Option<&String> = None;
 
         // Wayland Exact app

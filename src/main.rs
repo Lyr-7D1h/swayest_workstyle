@@ -2,15 +2,13 @@ mod args;
 mod config;
 mod util;
 
-use std::collections::VecDeque;
-
 use config::Config;
 use futures_util::StreamExt;
 use log::{debug, error};
 use swayipc::{
     bail,
     reply::{Node, NodeType},
-    Connection, Error, EventType, Fallible,
+    Connection, EventType, Fallible,
 };
 
 fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
@@ -20,11 +18,8 @@ fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
         }
     };
 
-    for node in &node.nodes {
+    for node in node.nodes.iter().chain(node.floating_nodes.iter()) {
         get_windows(node, windows);
-    }
-    for node in &node.floating_nodes {
-        get_windows(node, windows)
     }
 }
 
@@ -73,59 +68,42 @@ async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallibl
     return Ok(());
 }
 
-fn get_workspace_with_focus_recurse<'a>(
-    parents: &mut VecDeque<&'a Node>,
-    node: &'a Node,
-) -> Option<&'a Node> {
-    if node.focused {
-        if node.node_type == NodeType::Workspace {
-            return Some(node);
-        } else if node.node_type == NodeType::Con || node.node_type == NodeType::FloatingCon {
-            for parent in parents.iter() {
-                if parent.node_type == NodeType::Workspace {
-                    return Some(parent);
-                }
-            }
-        }
+fn get_workspaces_recurse<'a>(node: &'a Node, workspaces: &mut Vec<&'a Node>) {
+    if node.node_type == NodeType::Workspace && node.name != Some("__i3_scratch".to_string()) {
+        workspaces.push(node);
+        return;
     }
 
-    for child in node.nodes.iter().chain(node.floating_nodes.iter()) {
-        parents.push_front(child);
-        if let Some(n) = get_workspace_with_focus_recurse(parents, child) {
-            return Some(n);
-        }
-        parents.pop_front();
+    for child in node.nodes.iter() {
+        get_workspaces_recurse(child, workspaces)
     }
-
-    return None;
 }
 
-fn get_workspace_with_focus(tree: &Node) -> Result<&Node, Error> {
-    if let Some(workspace) = get_workspace_with_focus_recurse(&mut VecDeque::new(), tree) {
-        return Ok(workspace);
-    }
-
-    bail!("Could not find a workspace with focus")
-}
-
-async fn update_workspace(con: &mut Connection, config: &mut Config) -> Fallible<()> {
+async fn update_workspaces(con: &mut Connection, config: &mut Config) -> Fallible<()> {
     let tree = con.get_tree().await?;
-    let workspace = get_workspace_with_focus(&tree)?;
-    update_workspace_name(config, workspace).await?;
+
+    let mut workspaces = vec![];
+    get_workspaces_recurse(&tree, &mut workspaces);
+
+    config.update();
+    for workspace in workspaces {
+        update_workspace_name(config, workspace).await?;
+    }
+
     Ok(())
 }
 
 async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
     let mut events = Connection::new()
         .await?
-        .subscribe(&[EventType::Workspace, EventType::Window])
+        .subscribe(&[EventType::Window])
         .await?;
 
     let mut con = Connection::new().await?;
 
     while let Some(event) = events.next().await {
         if let Ok(_) = event {
-            if let Err(e) = update_workspace(&mut con, &mut config).await {
+            if let Err(e) = update_workspaces(&mut con, &mut config).await {
                 error!("Could not update workspace name: {}", e);
             }
         }
