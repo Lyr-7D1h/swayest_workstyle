@@ -4,6 +4,8 @@ An executable similar to [workstyle](https://github.com/pierrechevalier83/workst
 
 The main difference between this and `workstyle` is that this supports exact app names instead of only generic titles.
 
+Meant to work best/only with Wayland and Sway.
+
 It also supports a fallback icon for when it couldn't match an App.
 
 This ensures that icons are always valid based on the application being run instead of soly relying on application title. (Does not work well with browers, since you can type anything and it will show up in title name)
