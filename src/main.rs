@@ -123,13 +123,10 @@ async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
 
     let mut con = Connection::new().await?;
 
-    while let Some(e) = events.next().await {
-        if let Ok(_) = e {
-            match update_workspace(&mut con, &mut config).await {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("Could not update workspace name: {}", e);
-                }
+    while let Some(event) = events.next().await {
+        if let Ok(_) = event {
+            if let Err(e) = update_workspace(&mut con, &mut config).await {
+                error!("Could not update workspace name: {}", e);
             }
         }
     }
