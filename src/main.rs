@@ -23,9 +23,11 @@ fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
     }
 }
 
-async fn update_workspace_name(config: &mut Config, workspace: &Node) -> Fallible<()> {
-    let mut conn = Connection::new().await?;
-
+async fn update_workspace_name(
+    conn: &mut Connection,
+    config: &mut Config,
+    workspace: &Node,
+) -> Fallible<()> {
     let mut windows = vec![];
     get_windows(workspace, &mut windows);
 
@@ -79,15 +81,15 @@ fn get_workspaces_recurse<'a>(node: &'a Node, workspaces: &mut Vec<&'a Node>) {
     }
 }
 
-async fn update_workspaces(con: &mut Connection, config: &mut Config) -> Fallible<()> {
-    let tree = con.get_tree().await?;
+async fn update_workspaces(conn: &mut Connection, config: &mut Config) -> Fallible<()> {
+    let tree = conn.get_tree().await?;
 
     let mut workspaces = vec![];
     get_workspaces_recurse(&tree, &mut workspaces);
 
     config.update();
     for workspace in workspaces {
-        update_workspace_name(config, workspace).await?;
+        update_workspace_name(conn, config, workspace).await?;
     }
 
     Ok(())
