@@ -32,7 +32,7 @@ pub struct Config {
     match_config: MatchConfig,
 }
 
-const DEFAULT_CONFIG: &'static [u8; 1151] = include_bytes!("default_config.toml");
+const DEFAULT_CONFIG: &'static [u8; 1372] = include_bytes!("default_config.toml");
 
 /// Fetch user config content and create a config file if does not exist
 fn get_user_config_content() -> Result<String, Error> {
@@ -216,7 +216,10 @@ impl Config {
             if let Some(generic_name) = &node.name {
                 for m in &self.match_config.matching {
                     if let MatchType::Generic = m.match_type {
-                        if generic_name.to_lowercase().contains(&m.pattern) {
+                        if generic_name
+                            .to_lowercase()
+                            .contains(&m.pattern.to_lowercase())
+                        {
                             return m.value.clone();
                         }
                     } else if m.pattern == *exact_name {

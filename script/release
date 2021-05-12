@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -e
+
+AUR_REPO=ssh://aur@aur.archlinux.org/sworkstyle.git
+
+VERSION=$1
+
+if [[ ! $VERSION =~ ^[0-9]*\.[0-9]*\.[0-9]*$ ]]; then
+  echo "No version given"
+  exit 1
+fi
+
+check_cargo() {
+  cargo publish --dry-run
+}
+
+release_github() {
+  gh release create $VERSION
+}
+
+release_cargo() {
+  cargo release
+}
+
+release_aur() {
+  mkdir tmp
+  cd tmp
+
+  git clone $AUR_REPO .
+  sed -i "s/pkgver=.*/pkgver=$VERSION" PKGBUILD
+  makepkg --printsrcinfo > .SRCINFO
+  git push
+
+  rm -rf tmp
+}
+
+git tag $VERSION

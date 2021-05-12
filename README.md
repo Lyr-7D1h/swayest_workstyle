@@ -76,18 +76,28 @@ Note that the crate [`find_unicode`](https://github.com/pierrechevalier83/find_u
 fallback = ''
 
 [matching]
+"Chia Blockchain" = ""
+"Steam" = ""
+"vlc" = ""
+"org.qbittorrent.qBittorrent" = ""
+"Thunderbird" = ""
+"Postman" = ""
+"Insomnia" = ""
+"Bitwarden" = ""
+"Google-chrome" = ""
+"Chromium" = ""
+"Slack" = ""
+"Code" = ""
+"code-oss" = ""
+"Spotify" = ""
 "github" = { type = "generic", value = "" }
 "rust" = { type = "generic", value = "" }
+"firefox" = ""
+"Nightly" = ""
+"firefoxdeveloperedition" = ""
 "vim" = { type = "generic", value = "" }
 "npm" = { type = "generic", value = "" }
 "node" = { type = "generic", value = "" }
 "yarn" = { type = "generic", value = "" }
-"thunderbird" = ""
-"Bitwarden" = ""
-"Google-chrome" = ""
-"Slack" = ""
-"Code" = ""
 "Alacritty" = ""
-"Spotify" = ""
-"firefox" = ""
 ```
