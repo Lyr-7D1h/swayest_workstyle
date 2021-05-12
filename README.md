@@ -43,7 +43,7 @@ sworkstyle
 ## Sway Configuration
 
 ```
-exec_always sworkstyle &> /tmp/sworkstyle.log
+exec sworkstyle &> /tmp/sworkstyle.log
 ```
 
 Note that since your workspaces will be renamed all the time, you should configure your keybindings to use numbered workspaces instead of assuming that the name is the number:
@@ -101,3 +101,5 @@ fallback = ''
 "yarn" = { type = "generic", value = "" }
 "Alacritty" = ""
 ```
+## Roadmap
+[ROADMAP.md](ROADMAP.md)
