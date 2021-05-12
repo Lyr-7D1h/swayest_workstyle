@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# Don't forget to update Cargo.toml with the right version before running
+#
 
 set -e
 
@@ -12,21 +15,35 @@ if [[ ! $VERSION =~ ^[0-9]*\.[0-9]*\.[0-9]*$ ]]; then
 fi
 
 check_cargo() {
+  echo "Cargo: validating"
+  if ! test -f ~/.cargo/credentials; then
+    echo "~/.cargo/credentials does not exist"
+    exit 1
+  fi
   cargo publish --dry-run
 }
 
+check_github() {
+  echo "Github: validating"
+  gh auth status
+}
+
 release_github() {
+  echo "Github: creating release"
   gh release create $VERSION
 }
 
 release_cargo() {
-  cargo release
+  echo "Cargo: publishing"
+  cargo publish
 }
 
 release_aur() {
+  echo "AUR: creating temp"
   mkdir tmp
   cd tmp
 
+  echo "AUR: cloning and modifiying pkgver"
   git clone $AUR_REPO .
   sed -i "s/pkgver=.*/pkgver=$VERSION" PKGBUILD
   makepkg --printsrcinfo > .SRCINFO
@@ -35,4 +52,12 @@ release_aur() {
   rm -rf tmp
 }
 
+check_cargo
+check_github
+
 git tag $VERSION
+git push origin --tags
+
+release_github
+release_cargo
+release_aur
