@@ -91,7 +91,6 @@ fallback = ''
 "code-oss" = ""
 "Spotify" = ""
 "github" = { type = "generic", value = "" }
-"rust" = { type = "generic", value = "" }
 "firefox" = ""
 "Nightly" = ""
 "firefoxdeveloperedition" = ""
@@ -101,5 +100,7 @@ fallback = ''
 "yarn" = { type = "generic", value = "" }
 "Alacritty" = ""
 ```
+
 ## Roadmap
+
 [ROADMAP.md](ROADMAP.md)
