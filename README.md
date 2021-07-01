@@ -103,4 +103,10 @@ fallback = ''
 
 ## Roadmap
 
-[ROADMAP.md](ROADMAP.md)
+- Regex support for pattern matching
+- Allow multiple instances of a program to be displayed with only one icon
+
+## Known Issues
+
+- Using sway's alt-tab behavior can cause a workspace to be not named
+- When multiple sworkstyles instances it can cause very high cpu usage
