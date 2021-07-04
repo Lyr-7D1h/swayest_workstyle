@@ -5,44 +5,49 @@
 #
 # format:
 #
-#   "{pattern}" = { type = "generic" | "exact", value = "{icon}" }
+# 	'{pattern}' = '{icon}'
 #
-# pattern: can either be the exact app_name or a piece of text contained in the title ignoring casing.
+# pattern: Can either be the exact "app_name" (app_id/class) of the window or a regex string in the format of `"/{regex}/"` which will match the window "title".
 # icon: Your beatifull icon
 #
-# You can also you the shorthand for exact matching using
-#   "{pattern}" = "{icon}"
+# verbose format:
+# 
+#	'{pattern}' = { type = 'generic' | 'exact', value = '{icon}' }
+#
 #
 # If it couldn't match something it will print:
 # 
-# WARN [sworkstyle:config] No match for "{app_name}" with title "{title}" 
+# WARN [sworkstyle:config] No match for '{app_name}' with title '{title}' 
 #
 # You can use {title} to do a generic matching 
-# You can use {app_name} to do a exact match
+# You can use {app_name} to do an exact match
 
 fallback = ''
 
 [matching]
-"Chia Blockchain" = ""
-"Steam" = ""
-"vlc" = ""
-"org.qbittorrent.qBittorrent" = ""
-"Thunderbird" = ""
-"Postman" = ""
-"Insomnia" = ""
-"Bitwarden" = ""
-"Google-chrome" = ""
-"Chromium" = ""
-"Slack" = ""
-"Code" = ""
-"code-oss" = ""
-"Spotify" = ""
-"github" = { type = "generic", value = "" }
-"firefox" = ""
-"Nightly" = ""
-"firefoxdeveloperedition" = ""
-"vim" = { type = "generic", value = "" }
-"npm" = { type = "generic", value = "" }
-"node" = { type = "generic", value = "" }
-"yarn" = { type = "generic", value = "" }
-"Alacritty" = ""
+'discord' = ''
+'balena-etcher' = ''
+'Chia Blockchain' = ''
+'Steam' = ''
+'vlc' = ''
+'org.qbittorrent.qBittorrent' = ''
+'Thunderbird' = ''
+'thunderbird' = ''
+'Postman' = ''
+'Insomnia' = ''
+'Bitwarden' = ''
+'Google-chrome' = ''
+'Chromium' = ''
+'Slack' = ''
+'Code' = ''
+'code-oss' = ''
+'Spotify' = ''
+'/(?i)Github.*Firefox/' = ''
+'firefox' = ''
+'Nightly' = ''
+'firefoxdeveloperedition' = ''
+'/nvim ?\w*/' = ''
+'/npm/' = ''
+'/node/' = ''
+'/yarn/' = ''
+'Alacritty' = ''

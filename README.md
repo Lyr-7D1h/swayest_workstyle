@@ -70,43 +70,65 @@ Simply add that string to your config file, with an icon of your choice.
 
 Note that the crate [`find_unicode`](https://github.com/pierrechevalier83/find_unicode/) can help find a unicode character directly from the command line. It now supports all of nerdfonts unicode space.
 
-### Example Config
+For a reference to the regex syntax see the [`regex`](https://docs.rs/regex/1.5.4/regex/#syntax) crate
+
+### Matching
+
+**Standard**
+
+```
+'{pattern}' = '{icon}'
+
+pattern: Can either be the exact "app_name" (app_id/class) of the window or a regex string in the format of `"/{regex}/"` which will match the window "title".
+icon: Your beautifull icon
+```
+
+**Verbose**
+
+```
+'{pattern}' = { type = 'generic' | 'exact', value = '{icon}' }
+```
+
+_**Note:**_ You'll only have to use the verbose format when matching generic with a case insensitive text. `'case insensitive title' = { type = 'generic', value = 'A' }`
+
+### Default Config
 
 ```toml
 fallback = ''
 
 [matching]
-"Chia Blockchain" = ""
-"Steam" = ""
-"vlc" = ""
-"org.qbittorrent.qBittorrent" = ""
-"Thunderbird" = ""
-"Postman" = ""
-"Insomnia" = ""
-"Bitwarden" = ""
-"Google-chrome" = ""
-"Chromium" = ""
-"Slack" = ""
-"Code" = ""
-"code-oss" = ""
-"Spotify" = ""
-"github" = { type = "generic", value = "" }
-"firefox" = ""
-"Nightly" = ""
-"firefoxdeveloperedition" = ""
-"vim" = { type = "generic", value = "" }
-"npm" = { type = "generic", value = "" }
-"node" = { type = "generic", value = "" }
-"yarn" = { type = "generic", value = "" }
-"Alacritty" = ""
+'discord' = ''
+'balena-etcher' = ''
+'Chia Blockchain' = ''
+'Steam' = ''
+'vlc' = ''
+'org.qbittorrent.qBittorrent' = ''
+'Thunderbird' = ''
+'thunderbird' = ''
+'Postman' = ''
+'Insomnia' = ''
+'Bitwarden' = ''
+'Google-chrome' = ''
+'Chromium' = ''
+'Slack' = ''
+'Code' = ''
+'code-oss' = ''
+'Spotify' = ''
+'/(?i)Github.*Firefox/' = ''
+'firefox' = ''
+'Nightly' = ''
+'firefoxdeveloperedition' = ''
+'/nvim ?\w*/' = ''
+'/npm/' = ''
+'/node/' = ''
+'/yarn/' = ''
+'Alacritty' = ''
 ```
 
 ## Roadmap
 
-- Regex support for pattern matching
-- Allow multiple instances of a program to be displayed with only one icon
+- Allow multiple instances of a program to be displayed with only one icon `unique = true`
 
 ## Known Issues
 
 - Using sway's alt-tab behavior can cause a workspace to be not named
-- When multiple sworkstyles instances it can cause very high cpu usage

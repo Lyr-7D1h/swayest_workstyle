@@ -1,28 +1,59 @@
 extern crate dirs;
 
 use std::{
+    error::Error,
     fs::{create_dir_all, read_to_string, File},
-    io::{Error, ErrorKind, Write},
+    io::Write,
     str::from_utf8,
 };
 
 use super::util::prettify_option;
+use anyhow::{bail, Context};
 use log::{error, info, warn};
+use regex::Regex;
 use swayipc::reply::Node;
 use toml::Value;
 
-#[derive(Clone)]
-enum MatchType {
-    Exact,
-    Generic,
+const DEFAULT_CONFIG: &'static [u8; 1291] = include_bytes!("default_config.toml");
+
+#[derive(Clone, Debug)]
+enum Pattern {
+    Regex(Regex),
+    String(String),
 }
-#[derive(Clone)]
-struct Match {
+
+impl Pattern {
+    fn from_string(mut string: String) -> anyhow::Result<Pattern> {
+        if string.starts_with("/") && string.ends_with("/") {
+            string.remove(string.len() - 1);
+            string.remove(0);
+            let regex = Regex::new(&string).with_context(|| "Invalid regex")?;
+            Ok(Pattern::Regex(regex))
+        } else {
+            Ok(Pattern::String(string))
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct GenericMatch {
+    pattern: Pattern,
+    value: String,
+}
+
+#[derive(Clone, Debug)]
+struct ExactMatch {
     pattern: String,
     value: String,
-    match_type: MatchType,
 }
-#[derive(Clone)]
+
+#[derive(Clone, Debug)]
+enum Match {
+    Generic(GenericMatch),
+    Exact(ExactMatch),
+}
+
+#[derive(Clone, Debug)]
 struct MatchConfig {
     matching: Vec<Match>,
     fallback: Option<String>,
@@ -32,16 +63,12 @@ pub struct Config {
     match_config: MatchConfig,
 }
 
-const DEFAULT_CONFIG: &'static [u8; 1327] = include_bytes!("default_config.toml");
-
 /// Fetch user config content and create a config file if does not exist
-fn get_user_config_content() -> Result<String, Error> {
-    let sworkstyle_config_dir = dirs::config_dir()
-        .ok_or(Error::new(
-            ErrorKind::Other,
-            "Missing default XDG Config directory",
-        ))?
-        .join("sworkstyle");
+fn get_user_config_content() -> anyhow::Result<String> {
+    let sworkstyle_config_dir = match dirs::config_dir() {
+        Some(dir) => dir.join("sworkstyle"),
+        None => bail!("Could not find config dir"),
+    };
 
     create_dir_all(&sworkstyle_config_dir)?;
 
@@ -52,12 +79,7 @@ fn get_user_config_content() -> Result<String, Error> {
         let mut config_file = File::create(sworkstyle_config_path)?;
         config_file.write_all(DEFAULT_CONFIG)?;
         content = from_utf8(DEFAULT_CONFIG)
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("Failed to convert default content to string: {}", e),
-                )
-            })?
+            .with_context(|| "Failed to convert default content to string")?
             .to_string()
     } else {
         content = read_to_string(sworkstyle_config_path)?;
@@ -67,96 +89,70 @@ fn get_user_config_content() -> Result<String, Error> {
 }
 
 /// Parse toml config content to icon_map
-fn parse_content_to_icon_map(content: &String) -> Result<MatchConfig, Error> {
-    let map: Value = toml::from_str(content).unwrap();
+fn parse_content_to_icon_map(content: &String) -> anyhow::Result<MatchConfig> {
+    let map: Value = toml::from_str(content)?; //.with_context(|| "Could not parse config content")?;
 
-    let map_to_match = |k: (&String, &Value)| {
+    let map_to_match = |k: (&String, &Value)| -> anyhow::Result<Match> {
         if let Some(value) = k.1.as_str() {
-            return Ok(Match {
-                pattern: k.0.to_string(),
-                value: value.to_string(),
-                match_type: MatchType::Exact,
-            });
+            let value = value.to_string();
+            let pattern = Pattern::from_string(k.0.to_string())
+                .with_context(|| format!("Invalid pattern given: {}", k.0))?;
+
+            match pattern {
+                Pattern::Regex(_) => return Ok(Match::Generic(GenericMatch { pattern, value })),
+                Pattern::String(pattern) => return Ok(Match::Exact(ExactMatch { pattern, value })),
+            };
         }
 
         if let Some(table) = k.1.as_table() {
             let match_type = table
                 .get("type")
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    format!("could not parse: {}", k.0),
-                ))?
+                .with_context(|| format!("Could not parse: {}", k.0))?
                 .as_str()
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    format!("value of {} is not a string", k.0),
-                ))?;
-
-            let match_type = match &match_type[..] {
-                "exact" => MatchType::Exact,
-                "generic" => MatchType::Generic,
-                _ => {
-                    return Err(Error::new(
-                        ErrorKind::InvalidData,
-                        format!(
-                            "Invalid match type should be exact of generic but found {}",
-                            match_type
-                        ),
-                    ))
-                }
-            };
+                .with_context(|| format!("Value of {} is not a string", k.0))?;
 
             let value = table
                 .get("value")
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    format!("could not parse: {}", k.0),
-                ))?
+                .with_context(|| format!("Could not parse: {}", k.0))?
                 .as_str()
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    format!("value of {} is not a string", k.0),
-                ))?
+                .with_context(|| format!("Value of {} is not a string", k.0))?
                 .to_string();
 
-            return Ok(Match {
-                pattern: k.0.to_string(),
-                value,
-                match_type,
-            });
+            let m = match &match_type[..] {
+                "exact" => Match::Exact(ExactMatch {
+                    pattern: k.0.to_string(),
+                    value,
+                }),
+                "generic" => Match::Generic(GenericMatch {
+                    pattern: Pattern::from_string(k.0.to_string())
+                        .with_context(|| format!("Failed to parse pattern: {}", k.0))?,
+                    value,
+                }),
+                _ => bail!("Invalid match type: {}", k.1),
+            };
+
+            return Ok(m);
         }
 
-        Err(Error::new(
-            ErrorKind::InvalidData,
-            format!("could not parse {}", k.1),
-        ))
+        bail!("Could not parse {}", k.1)
     };
 
     match map {
         Value::Table(root) => {
             let matching: Vec<Match> = root
                 .get("matching")
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    "matching table not found",
-                ))?
+                .with_context(|| "Matching table not found")?
                 .as_table()
-                .ok_or(Error::new(
-                    ErrorKind::InvalidData,
-                    "could not parse exact to table",
-                ))?
+                .with_context(|| "Could not parse matching table")?
                 .iter()
                 .map(map_to_match)
-                .collect::<Result<Vec<Match>, Error>>()?
+                .collect::<anyhow::Result<Vec<Match>>>()?
                 .into_iter()
                 .collect();
 
             let fallback: Option<String> = match root.get("fallback") {
                 Some(value) => {
-                    let f = value.as_str().ok_or(Error::new(
-                        ErrorKind::InvalidData,
-                        "fallback is not a string",
-                    ))?;
+                    let f = value.as_str().with_context(|| "Fallback is not a string")?;
                     Some(f.to_string())
                 }
                 None => None,
@@ -164,13 +160,14 @@ fn parse_content_to_icon_map(content: &String) -> Result<MatchConfig, Error> {
 
             Ok(MatchConfig { matching, fallback })
         }
-        _ => Err(Error::new(ErrorKind::InvalidData, "no root table found")),
+        _ => bail!("No root table found"),
     }
 }
 
 fn get_match_config() -> MatchConfig {
-    let get_user_config = || -> Result<MatchConfig, Error> {
-        let content = get_user_config_content()?;
+    let get_user_config = || -> anyhow::Result<MatchConfig> {
+        let content =
+            get_user_config_content().with_context(|| "Could not get user config content")?;
         parse_content_to_icon_map(&content)
     };
 
@@ -187,7 +184,7 @@ fn get_match_config() -> MatchConfig {
 }
 
 impl Config {
-    pub fn new() -> Result<Config, Error> {
+    pub fn new() -> Result<Config, Box<dyn Error>> {
         let match_config = get_match_config();
 
         Ok(Config { match_config })
@@ -215,15 +212,24 @@ impl Config {
         if let Some(exact_name) = exact_name {
             if let Some(generic_name) = &node.name {
                 for m in &self.match_config.matching {
-                    if let MatchType::Generic = m.match_type {
-                        if generic_name
-                            .to_lowercase()
-                            .contains(&m.pattern.to_lowercase())
-                        {
-                            return m.value.clone();
+                    match m {
+                        Match::Generic(m) => match &m.pattern {
+                            Pattern::Regex(r) => {
+                                if r.is_match(generic_name) {
+                                    return m.value.clone();
+                                }
+                            }
+                            Pattern::String(p) => {
+                                if generic_name.to_lowercase().contains(&p.to_lowercase()) {
+                                    return m.value.clone();
+                                }
+                            }
+                        },
+                        Match::Exact(m) => {
+                            if exact_name == &m.pattern {
+                                return m.value.clone();
+                            }
                         }
-                    } else if m.pattern == *exact_name {
-                        return m.value.clone();
                     }
                 }
             }

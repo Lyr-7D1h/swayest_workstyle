@@ -14,6 +14,7 @@ use swayipc::{
     Connection, EventType, Fallible,
 };
 
+/// Rescursively add nodes with node type floatingCon and con to windows
 fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
     if node.node_type == NodeType::FloatingCon || node.node_type == NodeType::Con {
         if let Some(_) = node.name {
@@ -142,7 +143,13 @@ async fn main() -> Fallible<()> {
 
     check_already_running();
 
-    let config = Config::new()?;
+    let config = match Config::new() {
+        Ok(c) => c,
+        Err(e) => {
+            error!("Failed to create config: {}", e);
+            process::exit(1)
+        }
+    };
 
     subscribe_to_window_events(config).await?;
 
