@@ -2,7 +2,10 @@ mod args;
 mod config;
 mod util;
 
+use std::process;
+
 use config::Config;
+use fslock::LockFile;
 use futures_util::StreamExt;
 use log::{debug, error};
 use swayipc::{
@@ -96,6 +99,7 @@ async fn update_workspaces(conn: &mut Connection, config: &mut Config) -> Fallib
 }
 
 async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
+    debug!("Subscribing to window events");
     let mut events = Connection::new()
         .await?
         .subscribe(&[EventType::Window])
@@ -114,9 +118,29 @@ async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
     return Ok(());
 }
 
+fn check_already_running() {
+    let mut file = LockFile::open("/tmp/sworkstyle.lock").unwrap();
+
+    let locked = file.try_lock().unwrap();
+
+    if locked == false {
+        error!("Sworkstyle already running");
+        process::exit(1)
+    }
+
+    ctrlc::set_handler(move || {
+        debug!("Unlocking /tmp/sworkstyle.lock");
+        file.unlock().unwrap();
+        process::exit(0)
+    })
+    .expect("Could not set ctrlc handler")
+}
+
 #[tokio::main]
 async fn main() -> Fallible<()> {
     args::setup();
+
+    check_already_running();
 
     let config = Config::new()?;
 

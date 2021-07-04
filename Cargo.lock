@@ -211,6 +211,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bitflags"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
+
+[[package]]
 name = "blake2b_simd"
 version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -326,6 +332,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctrlc"
+version = "3.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "232295399409a8b7ae41276757b5a1cc21032848d42bff2352261f958b3ca29a"
+dependencies = [
+ "nix",
+ "winapi",
+]
+
+[[package]]
 name = "dirs"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -380,6 +396,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca5faf057445ce5c9d4329e382b2ce7ca38550ef3b73a5348362d5f24e0c7fe3"
 dependencies = [
  "instant",
+]
+
+[[package]]
+name = "fslock"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b14c83e47c73f7d62d907ae24a1a98e9132df3c33eb6c54fcf4bce0dbc41d5af"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]
@@ -586,6 +612,18 @@ checksum = "670361df1bc2399ee1ff50406a0d422587dd3bb0da596e1978fe8e05dabddf4f"
 dependencies = [
  "libc",
  "socket2",
+]
+
+[[package]]
+name = "nix"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa9b4819da1bc61c0ea48b63b7bc8604064dd43013e7cc325df098d49cd7c18a"
+dependencies = [
+ "bitflags",
+ "cc",
+ "cfg-if 1.0.0",
+ "libc",
 ]
 
 [[package]]
@@ -826,9 +864,11 @@ dependencies = [
 
 [[package]]
 name = "sworkstyle"
-version = "1.0.8"
+version = "1.0.9"
 dependencies = [
+ "ctrlc",
  "dirs",
+ "fslock",
  "futures-util",
  "log",
  "simple_logger",

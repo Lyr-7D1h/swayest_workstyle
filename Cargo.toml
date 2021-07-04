@@ -1,6 +1,6 @@
 [package]
 name = "sworkstyle"
-version = "1.0.8"
+version = "1.0.9"
 authors = ["Lyr-7D1h <lyr-7d1h@pm.me>"]
 edition = "2018"
 license = "MIT"
@@ -18,3 +18,5 @@ futures-util = "0.3.7"
 dirs = "3.0"
 simple_logger = "1"
 log = "0.4"
+fslock = "0.1.6"
+ctrlc = "3.1.9"
