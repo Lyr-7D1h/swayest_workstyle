@@ -1,5 +1,7 @@
 # Swayest Workstyle
 
+Map workspace name to icons defined depending on the windows inside of the workspace.
+
 An executable similar to [workstyle](https://github.com/pierrechevalier83/workstyle).
 
 The main difference between this and `workstyle` is that this supports exact app names instead of only generic titles.
