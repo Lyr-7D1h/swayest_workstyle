@@ -130,6 +130,7 @@ fallback = ''
 ## Roadmap
 
 - Allow multiple instances of a program to be displayed with only one icon `unique = true`
+- Cmdline arg for specifying config location `-c {path_to_config}`
 
 ## Known Issues
 
