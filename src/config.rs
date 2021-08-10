@@ -84,6 +84,12 @@ fn get_user_config_content() -> anyhow::Result<String> {
     } else {
         content = read_to_string(sworkstyle_config_path)?;
     }
+//Add a second config file if it exists
+let sworkstyle_config_path_user = sworkstyle_config_dir.join("user-config.toml");
+if sworkstyle_config_path_user.exists() {
+let user_file = read_to_string(sworkstyle_config_path_user);
+content.extend(user_file);
+}
 
     Ok(content)
 }
