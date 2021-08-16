@@ -65,7 +65,7 @@ over
 
 The main configuration consists of deciding which icons to use for which applications.
 
-The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. It will be generated if missing. Read the generated file. The syntax is in TOML and should be pretty self-explanatory. A secondardy config file called user-config.toml will be added at the end of the main config file if it exists.
+The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. It will be generated if missing. Read the generated file. The syntax is in TOML and should be pretty self-explanatory. A secondary config file called user-config.toml will be added at the end of the main config file if it exists.
 
 When an app isn't recogised in the config, `sworkstyle` will log the application name as a warning.
 Simply add that string to your config file, with an icon of your choice.
