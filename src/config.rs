@@ -13,7 +13,7 @@ use regex::Regex;
 use swayipc::reply::Node;
 use toml::Value;
 
-const DEFAULT_CONFIG: &'static [u8; 1291] = include_bytes!("default_config.toml");
+const DEFAULT_CONFIG: &'static [u8] = include_bytes!("default_config.toml");
 
 #[derive(Clone, Debug)]
 enum Pattern {
@@ -76,7 +76,7 @@ fn get_user_config_content() -> anyhow::Result<String> {
         .to_string();
 
     if sworkstyle_config_path.exists() {
-        let user_content = read_to_string(sworkstyle_config_path)?;
+        let user_content = read_to_string(sworkstyle_config_path)?.to_owned();
 
         for line in user_content.lines() {
             let split: Vec<&str> = line.split(" = ").collect();
@@ -88,7 +88,8 @@ fn get_user_config_content() -> anyhow::Result<String> {
             content = re.replace_all(&content, "").to_string();
         }
 
-        content = [content, user_content].join("\n"); // no idea why I cant to content.extend(user_content); here 
+        content.push_str("\n");
+        content.push_str(&user_content);
     }
 
     Ok(content)
