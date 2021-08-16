@@ -24,7 +24,7 @@ Your workspace shall never contain an empty icon again!
 
 ### Cargo
 
-```
+```bash
 cargo install sworkstyle
 ```
 
@@ -32,32 +32,32 @@ cargo install sworkstyle
 
 You can install it manually or use a aur helper like Yay.
 
-```
+```bash
 yay -S sworkstyle
 ```
 
 ## Usage
 
-```
+```bash
 sworkstyle
 ```
 
 ## Sway Configuration
 
-```
+```bash
 exec sworkstyle &> /tmp/sworkstyle.log
 ```
 
 Note that since your workspaces will be renamed all the time, you should configure your keybindings to use numbered workspaces instead of assuming that the name is the number:
 Prefer
 
-```
+```bash
     bindsym $mod+1 workspace number 1
 ```
 
 over
 
-```
+```bash
     bindsym $mod+1 workspace 1
 ```
 
@@ -65,9 +65,9 @@ over
 
 The main configuration consists of deciding which icons to use for which applications.
 
-The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. It will be generated if missing. Read the generated file. The syntax is in TOML and should be pretty self-explanatory. A secondary config file called user-config.toml will be added at the end of the main config file if it exists.
+The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. Its values will take precedence over the defaults. The syntax is in TOML and should be pretty self-explanatory.
 
-When an app isn't recogised in the config, `sworkstyle` will log the application name as a warning.
+When an app isn't recognized in the config, `sworkstyle` will log the application name as a warning.
 Simply add that string to your config file, with an icon of your choice.
 
 Note that the crate [`find_unicode`](https://github.com/pierrechevalier83/find_unicode/) can help find a unicode character directly from the command line. It now supports all of nerdfonts unicode space.
@@ -76,18 +76,18 @@ For a reference to the regex syntax see the [`regex`](https://docs.rs/regex/1.5.
 
 ### Matching
 
-**Standard**
+#### Standard
 
-```
+```toml
 '{pattern}' = '{icon}'
 
 pattern: Can either be the exact "app_name" (app_id/class) of the window or a regex string in the format of `"/{regex}/"` which will match the window "title".
 icon: Your beautiful icon
 ```
 
-**Verbose**
+#### Verbose
 
-```
+```toml
 '{pattern}' = { type = 'generic' | 'exact', value = '{icon}' }
 ```
 

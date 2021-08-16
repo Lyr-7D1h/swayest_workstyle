@@ -2,8 +2,7 @@ extern crate dirs;
 
 use std::{
     error::Error,
-    fs::{create_dir_all, read_to_string, File},
-    io::Write,
+    fs::{read_to_string},
     str::from_utf8,
 };
 
