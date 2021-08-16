@@ -82,7 +82,7 @@ For a reference to the regex syntax see the [`regex`](https://docs.rs/regex/1.5.
 '{pattern}' = '{icon}'
 
 pattern: Can either be the exact "app_name" (app_id/class) of the window or a regex string in the format of `"/{regex}/"` which will match the window "title".
-icon: Your beautifull icon
+icon: Your beautiful icon
 ```
 
 **Verbose**

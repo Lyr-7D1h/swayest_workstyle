@@ -74,7 +74,7 @@ fn get_user_config_content() -> anyhow::Result<String> {
 
     let sworkstyle_config_path = sworkstyle_config_dir.join("config.toml");
 
-    let content: String;
+    let mut content: String;
     if !sworkstyle_config_path.exists() {
         let mut config_file = File::create(sworkstyle_config_path)?;
         config_file.write_all(DEFAULT_CONFIG)?;
@@ -84,12 +84,13 @@ fn get_user_config_content() -> anyhow::Result<String> {
     } else {
         content = read_to_string(sworkstyle_config_path)?;
     }
-//Add a second config file if it exists
-let sworkstyle_config_path_user = sworkstyle_config_dir.join("user-config.toml");
-if sworkstyle_config_path_user.exists() {
-let user_file = read_to_string(sworkstyle_config_path_user);
-content.extend(user_file);
-}
+    
+    //Add a second config file if it exists
+    let sworkstyle_config_path_user = sworkstyle_config_dir.join("user-config.toml");
+    if sworkstyle_config_path_user.exists() {
+        let user_file = read_to_string(sworkstyle_config_path_user);
+        content.extend(user_file);
+    }
 
     Ok(content)
 }
