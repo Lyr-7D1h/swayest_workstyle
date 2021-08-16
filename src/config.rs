@@ -70,26 +70,26 @@ fn get_user_config_content() -> anyhow::Result<String> {
         None => bail!("Could not find config dir"),
     };
 
-    create_dir_all(&sworkstyle_config_dir)?;
-
     let sworkstyle_config_path = sworkstyle_config_dir.join("config.toml");
 
-    let mut content: String;
-    if !sworkstyle_config_path.exists() {
-        let mut config_file = File::create(sworkstyle_config_path)?;
-        config_file.write_all(DEFAULT_CONFIG)?;
-        content = from_utf8(DEFAULT_CONFIG)
-            .with_context(|| "Failed to convert default content to string")?
-            .to_string()
-    } else {
-        content = read_to_string(sworkstyle_config_path)?;
-    }
-    
-    //Add a second config file if it exists
-    let sworkstyle_config_path_user = sworkstyle_config_dir.join("user-config.toml");
-    if sworkstyle_config_path_user.exists() {
-        let user_file = read_to_string(sworkstyle_config_path_user);
-        content.extend(user_file);
+    let mut content = from_utf8(DEFAULT_CONFIG)
+        .with_context(|| "Failed to convert default content to string")?
+        .to_string();
+
+    if sworkstyle_config_path.exists() {
+        let user_content = read_to_string(sworkstyle_config_path)?;
+
+        for line in user_content.lines() {
+            let split: Vec<&str> = line.split(" = ").collect();
+
+            let together = format!(r"(?m)^{} = .*\n", split[0]);
+
+            let re = Regex::new(&together).unwrap();
+
+            content = re.replace_all(&content, "").to_string();
+        }
+
+        content = [content, user_content].join("\n"); // no idea why I cant to content.extend(user_content); here 
     }
 
     Ok(content)
