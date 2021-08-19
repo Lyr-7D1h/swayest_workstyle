@@ -79,6 +79,7 @@ fn get_user_config_content() -> anyhow::Result<String> {
         let user_content = read_to_string(sworkstyle_config_path)?.to_owned();
 
         for line in user_content.lines() {
+            print!("adding line: {}\n", line);
             // remove white spaces around the config line
             let trimmed = line.trim();
 
@@ -98,6 +99,8 @@ fn get_user_config_content() -> anyhow::Result<String> {
             content.push_str(trimmed);
         }
     }
+
+    print!("Result:\n{}",content);
 
     Ok(content)
 }
