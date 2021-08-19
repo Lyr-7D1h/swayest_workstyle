@@ -79,17 +79,24 @@ fn get_user_config_content() -> anyhow::Result<String> {
         let user_content = read_to_string(sworkstyle_config_path)?.to_owned();
 
         for line in user_content.lines() {
-            let split: Vec<&str> = line.split(" = ").collect();
+            // remove white spaces around the config line
+            let trimmed = line.trim();
 
-            let together = format!(r"(?m)^{} = .*\n", split[0]);
+            // if the line is an icon config, remove it from the config if it exists
+            if trimmed.starts_with("'") {
+                let split: Vec<&str> = trimmed.split(" = ").collect();
 
-            let re = Regex::new(&together).unwrap();
+                let together = format!(r"(?m)^{} = .*$\n", split[0].trim());
+    
+                let re = Regex::new(&together).unwrap();
+    
+                content = re.replace_all(&content, "").to_string();                
+            }
 
-            content = re.replace_all(&content, "").to_string();
+            // append the user config line to the config
+            content.push_str("\n");
+            content.push_str(trimmed);
         }
-
-        content.push_str("\n");
-        content.push_str(&user_content);
     }
 
     Ok(content)
