@@ -1,20 +1,15 @@
 extern crate dirs;
 
-use std::{
-    error::Error,
-    fs::{create_dir_all, read_to_string, File},
-    io::Write,
-    str::from_utf8,
-};
+use std::{fs::read_to_string, str::from_utf8};
 
 use super::util::prettify_option;
-use anyhow::{bail, Context};
+use anyhow::{bail, Context, Error};
 use log::{error, info, warn};
 use regex::Regex;
 use swayipc::reply::Node;
 use toml::Value;
 
-const DEFAULT_CONFIG: &'static [u8; 1291] = include_bytes!("default_config.toml");
+const DEFAULT_CONFIG: &'static [u8] = include_bytes!("default_config.toml");
 
 #[derive(Clone, Debug)]
 enum Pattern {
@@ -64,28 +59,22 @@ pub struct Config {
 }
 
 /// Fetch user config content and create a config file if does not exist
-fn get_user_config_content() -> anyhow::Result<String> {
+fn get_user_config_content() -> anyhow::Result<Option<String>> {
     let sworkstyle_config_dir = match dirs::config_dir() {
         Some(dir) => dir.join("sworkstyle"),
-        None => bail!("Could not find config dir"),
+        None => bail!("Could not find config directory"),
     };
-
-    create_dir_all(&sworkstyle_config_dir)?;
 
     let sworkstyle_config_path = sworkstyle_config_dir.join("config.toml");
 
-    let content: String;
     if !sworkstyle_config_path.exists() {
-        let mut config_file = File::create(sworkstyle_config_path)?;
-        config_file.write_all(DEFAULT_CONFIG)?;
-        content = from_utf8(DEFAULT_CONFIG)
-            .with_context(|| "Failed to convert default content to string")?
-            .to_string()
-    } else {
-        content = read_to_string(sworkstyle_config_path)?;
+        return Ok(None);
     }
 
-    Ok(content)
+    match read_to_string(sworkstyle_config_path) {
+        Ok(content) => Ok(Some(content)),
+        Err(e) => Err(Error::new(e)),
+    }
 }
 
 /// Parse toml config content to icon_map
@@ -165,29 +154,45 @@ fn parse_content_to_icon_map(content: &String) -> anyhow::Result<MatchConfig> {
 }
 
 fn get_match_config() -> MatchConfig {
-    let get_user_config = || -> anyhow::Result<MatchConfig> {
-        let content =
-            get_user_config_content().with_context(|| "Could not get user config content")?;
-        parse_content_to_icon_map(&content)
+    let default_config_content = from_utf8(DEFAULT_CONFIG).unwrap().to_string();
+    let mut default_config = parse_content_to_icon_map(&default_config_content).unwrap();
+
+    let user_config_content = match get_user_config_content() {
+        Ok(user_config_content) => user_config_content,
+        Err(e) => {
+            error!("Could not read config: {}", e);
+            return default_config;
+        }
     };
 
-    // Use default_icon_map if user config does not work
-    match get_user_config() {
-        Ok(im) => im,
-        Err(e) => {
-            error!("Invalid config format: {}", e);
-            info!("Using default config");
-            let default_content = from_utf8(DEFAULT_CONFIG).unwrap().to_string();
-            parse_content_to_icon_map(&default_content).unwrap()
+    match user_config_content {
+        Some(user_config_content) => match parse_content_to_icon_map(&user_config_content) {
+            Ok(mut user_config) => {
+                user_config.matching.append(&mut default_config.matching);
+
+                if user_config.fallback.is_none() {
+                    user_config.fallback = default_config.fallback
+                }
+
+                user_config
+            }
+            Err(e) => {
+                error!("Invalid config format: {}", e);
+                return default_config;
+            }
+        },
+        None => {
+            info!("No user config found, using default");
+            default_config
         }
     }
 }
 
 impl Config {
-    pub fn new() -> Result<Config, Box<dyn Error>> {
+    pub fn new() -> Config {
         let match_config = get_match_config();
 
-        Ok(Config { match_config })
+        Config { match_config }
     }
 
     pub fn update(&mut self) {

@@ -1,16 +1,20 @@
 # Swayest Workstyle
 
+![AUR version](https://img.shields.io/aur/version/sworkstyle)
+
 Map workspace name to icons defined depending on the windows inside of the workspace.
 
 An executable similar to [workstyle](https://github.com/pierrechevalier83/workstyle).
 
-The main difference between this and `workstyle` is that this supports exact app names instead of only generic titles.
+**Differences between `sworkstyle` and `workstyle`:**
 
-Meant to work best/only with Wayland and Sway.
+- Plug-and-play solution, build-in matching config, you can extend this config by creating/modifying `.config/sworkstyle/config.toml` or you can make a PR for your package manager or this repository with new matchers.
 
-It also supports a fallback icon for when it couldn't match an App.
+- Way better matching: using regex, exact app names and generic app titles.
 
-This ensures that icons are always valid based on the application being run instead of soly relying on application title. (Does not work well with browers, since you can type anything and it will show up in title name)
+- Specifically meant for Sway and Wayland
+
+- Fallback Icon
 
 Your workspace shall never contain an empty icon again!
 
@@ -24,7 +28,7 @@ Your workspace shall never contain an empty icon again!
 
 ### Cargo
 
-```
+```bash
 cargo install sworkstyle
 ```
 
@@ -32,66 +36,76 @@ cargo install sworkstyle
 
 You can install it manually or use a aur helper like Yay.
 
-```
+```bash
 yay -S sworkstyle
 ```
 
 ## Usage
 
-```
+```bash
 sworkstyle
 ```
 
 ## Sway Configuration
 
-```
+```bash
 exec sworkstyle &> /tmp/sworkstyle.log
 ```
 
 Note that since your workspaces will be renamed all the time, you should configure your keybindings to use numbered workspaces instead of assuming that the name is the number:
 Prefer
 
-```
+```bash
     bindsym $mod+1 workspace number 1
 ```
 
 over
 
-```
+```bash
     bindsym $mod+1 workspace 1
 ```
 
-## Configuration
+## Sworkstyle Configuration
 
 The main configuration consists of deciding which icons to use for which applications.
 
-The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. It will be generated if missing. Read the generated file. The syntax is in TOML and should be pretty self-explanatory.
+The config file is located at `${XDG_CONFIG_HOME}/sworkstyle/config.toml`. Its values will take precedence over the defaults. The syntax is in TOML and should be pretty self-explanatory.
 
-When an app isn't recogised in the config, `sworkstyle` will log the application name as a warning.
+When an app isn't recognized in the config, `sworkstyle` will log the application name as a warning.
 Simply add that string to your config file, with an icon of your choice.
 
-Note that the crate [`find_unicode`](https://github.com/pierrechevalier83/find_unicode/) can help find a unicode character directly from the command line. It now supports all of nerdfonts unicode space.
+Note that the crate [find_unicode](https://github.com/pierrechevalier83/find_unicode/) can help find a unicode character directly from the command line. It now supports all of nerdfonts unicode space.
 
-For a reference to the regex syntax see the [`regex`](https://docs.rs/regex/1.5.4/regex/#syntax) crate
+For a reference to the regex syntax see the [regex](https://docs.rs/regex/1.5.4/regex/#syntax) crate
 
 ### Matching
 
-**Standard**
+#### Standard
 
-```
+```toml
 '{pattern}' = '{icon}'
 
-pattern: Can either be the exact "app_name" (app_id/class) of the window or a regex string in the format of `"/{regex}/"` which will match the window "title".
-icon: Your beautifull icon
+# pattern: Can either be the exact "app_name" (app_id/class) of the window or a regex string in the format of `"/{regex}/"` which will match the window "title".
+# icon: Your beautiful icon
 ```
 
-**Verbose**
+#### Verbose
 
-```
+```toml
 '{pattern}' = { type = 'generic' | 'exact', value = '{icon}' }
 ```
 
 _**Note:**_ You'll only have to use the verbose format when matching generic with a case insensitive text. `'case insensitive title' = { type = 'generic', value = 'A' }`
+
+#### Troubleshooting
+
+If it couldn't match something it will print:
+
+WARN [sworkstyle:config] No match for '{app_name}' with title '{title}'
+
+You can use {title} to do a generic matching
+
+You can use {app_name} to do an exact match
 
 ### Default Config
 
@@ -126,6 +140,16 @@ fallback = ''
 '/yarn/' = ''
 'Alacritty' = ''
 ```
+
+## Package Maintainers
+
+If you want to change the build-in config, change `default_config.toml` with your config and install the project.
+
+You might also want [font-awesome](https://fontawesome.com/) as a dependency depending on your config.
+
+You can also make a PR to add a badge and add your install method under #Installation or to add matchers to the build-in config.
+
+See [aur](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sworkstyle) for an example build.
 
 ## Roadmap
 

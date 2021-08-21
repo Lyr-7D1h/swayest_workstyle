@@ -4,10 +4,12 @@ mod util;
 
 use std::process;
 
+use args::Args;
 use config::Config;
 use fslock::LockFile;
 use futures_util::StreamExt;
 use log::{debug, error};
+use simple_logger::SimpleLogger;
 use swayipc::{
     bail,
     reply::{Node, NodeType},
@@ -139,17 +141,16 @@ fn check_already_running() {
 
 #[tokio::main]
 async fn main() -> Fallible<()> {
-    args::setup();
+    let args = Args::from_cli();
+
+    SimpleLogger::new()
+        .with_level(args.log_level)
+        .init()
+        .unwrap();
 
     check_already_running();
 
-    let config = match Config::new() {
-        Ok(c) => c,
-        Err(e) => {
-            error!("Failed to create config: {}", e);
-            process::exit(1)
-        }
-    };
+    let config = Config::new();
 
     subscribe_to_window_events(config).await?;
 

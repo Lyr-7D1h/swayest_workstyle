@@ -1,18 +1,21 @@
 use std::{env, process};
 
 use log::LevelFilter;
-use simple_logger::SimpleLogger;
 
-/// Setup the program with the needed options
-pub fn setup() {
-    let mut log_level: LevelFilter = LevelFilter::Warn;
+pub struct Args {
+    pub log_level: LevelFilter,
+}
 
-    let mut args = env::args().skip(1);
-    while let Some(arg) = args.next() {
-        match &arg[..] {
-            "-h" | "--help" => {
-                println!(
-                    "Swayest Workstyle
+impl Args {
+    pub fn from_cli() -> Args {
+        let mut log_level: LevelFilter = LevelFilter::Warn;
+
+        let mut args = env::args().skip(1);
+        while let Some(arg) = args.next() {
+            match &arg[..] {
+                "-h" | "--help" => {
+                    println!(
+                        "Swayest Workstyle
 This tool will rename workspaces to the icons configured.
 Config can be found in $HOME/.config/sworkstyle
 
@@ -25,32 +28,33 @@ FLAGS
 
     --log-level
         Either \"error\", \"warn\", \"info\", \"debug\". Uses \"warn\" by default"
-                );
-                process::exit(0);
-            }
-            "--log-level" => {
-                if let Some(level) = args.next() {
-                    log_level = match &level[..] {
-                        "error" => LevelFilter::Error,
-                        "warn" => LevelFilter::Warn,
-                        "info" => LevelFilter::Info,
-                        "debug" => LevelFilter::Debug,
-                        _ => {
-                            eprintln!("Invalid logging option: {}", level);
-                            process::exit(1);
+                    );
+                    process::exit(0);
+                }
+                "--log-level" => {
+                    if let Some(level) = args.next() {
+                        log_level = match &level[..] {
+                            "error" => LevelFilter::Error,
+                            "warn" => LevelFilter::Warn,
+                            "info" => LevelFilter::Info,
+                            "debug" => LevelFilter::Debug,
+                            _ => {
+                                eprintln!("Invalid logging option: {}", level);
+                                process::exit(1);
+                            }
                         }
+                    } else {
+                        eprintln!("No logging option given");
+                        process::exit(1);
                     }
-                } else {
-                    eprintln!("No logging option given");
+                }
+                _ => {
+                    eprintln!("Did not recognize \"{}\" as an option", arg);
                     process::exit(1);
                 }
             }
-            _ => {
-                eprintln!("Did not recognize \"{}\" as an option", arg);
-                process::exit(1);
-            }
         }
-    }
 
-    SimpleLogger::new().with_level(log_level).init().unwrap();
+        return Args { log_level };
+    }
 }
