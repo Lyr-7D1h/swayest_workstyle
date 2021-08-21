@@ -93,7 +93,6 @@ async fn update_workspaces(conn: &mut Connection, config: &mut Config) -> Fallib
     let mut workspaces = vec![];
     get_workspaces_recurse(&tree, &mut workspaces);
 
-    config.update();
     for workspace in workspaces {
         update_workspace_name(conn, config, workspace).await?;
     }

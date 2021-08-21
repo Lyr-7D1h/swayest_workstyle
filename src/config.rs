@@ -195,10 +195,6 @@ impl Config {
         Config { match_config }
     }
 
-    pub fn update(&mut self) {
-        self.match_config = get_match_config();
-    }
-
     pub fn fetch_icon(&mut self, node: &Node) -> String {
         let mut exact_name: Option<&String> = None;
 
