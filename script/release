@@ -56,14 +56,14 @@ release_aur() {
   rm -rf tmp
 }
 
-# check_cargo
-# check_github
+check_cargo
+check_github
 
-# git tag $VERSION
-# git push origin --tags
+git tag $VERSION
+git push origin --tags
 
-# release_github
-# release_cargo
+release_github
+release_cargo
 release_aur
 
 echo "Release finished!"
