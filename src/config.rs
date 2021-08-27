@@ -210,11 +210,11 @@ impl Config {
             }
         }
 
-        if let Some(exact_name) = exact_name {
-            if let Some(generic_name) = &node.name {
-                for m in &self.match_config.matching {
-                    match m {
-                        Match::Generic(m) => match &m.pattern {
+        for m in &self.match_config.matching {
+            match m {
+                Match::Generic(m) => {
+                    if let Some(generic_name) = &node.name {
+                        match &m.pattern {
                             Pattern::Regex(r) => {
                                 if r.is_match(generic_name) {
                                     return m.value.clone();
@@ -225,11 +225,13 @@ impl Config {
                                     return m.value.clone();
                                 }
                             }
-                        },
-                        Match::Exact(m) => {
-                            if exact_name == &m.pattern {
-                                return m.value.clone();
-                            }
+                        }
+                    }
+                },
+                Match::Exact(m) => {
+                    if let Some(exact_name) = exact_name {
+                        if exact_name == &m.pattern {
+                            return m.value.clone();
                         }
                     }
                 }
