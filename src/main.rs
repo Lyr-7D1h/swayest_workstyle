@@ -149,7 +149,7 @@ async fn main() -> Fallible<()> {
 
     check_already_running();
 
-    let config = Config::new();
+    let config = Config::new(args.config_path);
 
     subscribe_to_window_events(config).await?;
 
