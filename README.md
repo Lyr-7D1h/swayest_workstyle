@@ -154,7 +154,6 @@ See [aur](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sworkstyle) for
 ## Roadmap
 
 - Allow multiple instances of a program to be displayed with only one icon `unique = true`
-- Cmdline arg for specifying config location `-c {path_to_config}`
 
 ## Known Issues
 
