@@ -59,7 +59,13 @@ pub struct Config {
 }
 
 /// Fetch user config content and create a config file if does not exist
-fn get_user_config_content() -> anyhow::Result<Option<String>> {
+fn get_user_config_content(config_path: Option<String>) -> anyhow::Result<Option<String>> {
+    if let Some(str_path) = config_path {
+        match read_to_string(&str_path) {
+            Ok(content) => return Ok(Some(content)),
+            Err(e) => error!("Could not open config path: {}, {}", &str_path, e),
+        }
+    }
     let sworkstyle_config_dir = match dirs::config_dir() {
         Some(dir) => dir.join("sworkstyle"),
         None => bail!("Could not find config directory"),
@@ -153,11 +159,11 @@ fn parse_content_to_icon_map(content: &String) -> anyhow::Result<MatchConfig> {
     }
 }
 
-fn get_match_config() -> MatchConfig {
+fn get_match_config(config_path: Option<String>) -> MatchConfig {
     let default_config_content = from_utf8(DEFAULT_CONFIG).unwrap().to_string();
     let mut default_config = parse_content_to_icon_map(&default_config_content).unwrap();
 
-    let user_config_content = match get_user_config_content() {
+    let user_config_content = match get_user_config_content(config_path) {
         Ok(user_config_content) => user_config_content,
         Err(e) => {
             error!("Could not read config: {}", e);
@@ -189,8 +195,8 @@ fn get_match_config() -> MatchConfig {
 }
 
 impl Config {
-    pub fn new() -> Config {
-        let match_config = get_match_config();
+    pub fn new(config_path: Option<String>) -> Config {
+        let match_config = get_match_config(config_path);
 
         Config { match_config }
     }
@@ -227,7 +233,7 @@ impl Config {
                             }
                         }
                     }
-                },
+                }
                 Match::Exact(m) => {
                     if let Some(exact_name) = exact_name {
                         if exact_name == &m.pattern {
