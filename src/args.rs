@@ -1,15 +1,15 @@
 use std::{env, process};
 
-use log::LevelFilter;
+use log::Level;
 
 pub struct Args {
-    pub log_level: LevelFilter,
+    pub log_level: Level,
     pub config_path: Option<String>,
 }
 
 impl Args {
     pub fn from_cli() -> Args {
-        let mut log_level: LevelFilter = LevelFilter::Warn;
+        let mut log_level = Level::Warn;
         let mut config_path = None;
 
         let mut args = env::args().skip(1);
@@ -40,10 +40,10 @@ FLAGS
                 "--log-level" => {
                     if let Some(level) = args.next() {
                         log_level = match &level[..] {
-                            "error" => LevelFilter::Error,
-                            "warn" => LevelFilter::Warn,
-                            "info" => LevelFilter::Info,
-                            "debug" => LevelFilter::Debug,
+                            "error" => Level::Error,
+                            "warn" => Level::Warn,
+                            "info" => Level::Info,
+                            "debug" => Level::Debug,
                             _ => {
                                 eprintln!("Invalid logging option: {}", level);
                                 process::exit(1);

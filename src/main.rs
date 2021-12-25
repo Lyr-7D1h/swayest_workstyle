@@ -8,8 +8,7 @@ use args::Args;
 use config::Config;
 use fslock::LockFile;
 use futures_util::StreamExt;
-use log::{debug, error};
-use simple_logger::SimpleLogger;
+use log::{debug, error, log_enabled};
 use swayipc::{
     bail,
     reply::{Node, NodeType},
@@ -121,7 +120,10 @@ async fn subscribe_to_window_events(mut config: Config) -> Fallible<()> {
 }
 
 fn check_already_running() {
-    let mut file = LockFile::open("/tmp/sworkstyle.lock").unwrap();
+    let mut file = match LockFile::open("/tmp/sworkstyle.lock") {
+        Ok(f) => f,
+        _ => return,
+    };
 
     let locked = file.try_lock().unwrap();
 
@@ -142,10 +144,9 @@ fn check_already_running() {
 async fn main() -> Fallible<()> {
     let args = Args::from_cli();
 
-    SimpleLogger::new()
-        .with_level(args.log_level)
-        .init()
-        .unwrap();
+    env_logger::init();
+
+    log_enabled!(args.log_level);
 
     check_already_running();
 
