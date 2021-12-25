@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Don't forget to update Cargo.toml with the right version before running
 #
