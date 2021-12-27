@@ -1,0 +1,32 @@
+on: 
+  release:
+    types: [published]
+  
+jobs:
+  cargo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: publish
+        run: cargo publish --verbose
+
+  aur:
+    runs-on: ubuntu-latest 
+    steps:
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
+      - name: Checkout aur repo
+        uses: actions/checkout@v2
+        with:
+          repository: ssh://aur@aur.archlinux.org/sworkstyle.git
+      - name: Publish AUR package
+        uses: KSXGitHub/github-actions-deploy-aur@${{ steps.get_version.outputs.VERSION }}
+        with:
+          pkgname: sworkstyle
+          pkgbuild: ./PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: git commit -m "Upgraded to version $VERSION"
+          ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
