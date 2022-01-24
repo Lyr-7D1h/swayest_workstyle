@@ -24,6 +24,8 @@
 
 fallback = ''
 
+force_ltr = false
+
 [matching]
 'discord' = ''
 'balena-etcher' = ''

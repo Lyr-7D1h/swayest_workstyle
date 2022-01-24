@@ -52,6 +52,7 @@ enum Match {
 struct MatchConfig {
     matching: Vec<Match>,
     fallback: Option<String>,
+    force_ltr: Option<bool>,
 }
 
 pub struct Config {
@@ -152,8 +153,15 @@ fn parse_content_to_icon_map(content: &String) -> anyhow::Result<MatchConfig> {
                 }
                 None => None,
             };
+            let force_ltr: Option<bool> = match root.get("force_ltr") {
+                Some(value) => {
+                    let f = value.as_bool().with_context(|| "force_ltr is not a boolean")?;
+                    Some(f)
+                }
+                None => Some(false),
+            };
 
-            Ok(MatchConfig { matching, fallback })
+            Ok(MatchConfig { matching, fallback, force_ltr })
         }
         _ => bail!("No root table found"),
     }
@@ -260,5 +268,9 @@ impl Config {
                 String::from("")
             }
         }
+    }
+
+    pub fn should_force_ltr(&mut self) -> bool {
+		self.match_config.force_ltr.unwrap_or_default()
     }
 }
