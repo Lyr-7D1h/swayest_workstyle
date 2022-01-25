@@ -107,10 +107,19 @@ You can use {title} to do a generic matching
 
 You can use {app_name} to do an exact match
 
+If a workspace name is reversed, you can force left to right formatting
+
+```toml
+'force_ltr' = true
+```
+The default value of `force_ltr` is `false`
+
 ### Default Config
 
 ```toml
 fallback = ''
+
+force_ltr = false
 
 [matching]
 'discord' = ''
