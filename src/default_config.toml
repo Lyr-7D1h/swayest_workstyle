@@ -23,6 +23,7 @@
 # You can use {app_name} to do an exact match
 
 fallback = ''
+unique = false
 
 [matching]
 'discord' = ''

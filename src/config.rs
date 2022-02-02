@@ -49,13 +49,14 @@ enum Match {
 }
 
 #[derive(Clone, Debug)]
-struct MatchConfig {
+pub struct MatchConfig {
     matching: Vec<Match>,
     fallback: Option<String>,
+    pub unique: Option<bool>,
 }
 
 pub struct Config {
-    match_config: MatchConfig,
+    pub match_config: MatchConfig,
 }
 
 /// Fetch user config content and create a config file if does not exist
@@ -153,7 +154,15 @@ fn parse_content_to_icon_map(content: &String) -> anyhow::Result<MatchConfig> {
                 None => None,
             };
 
-            Ok(MatchConfig { matching, fallback })
+            let unique: Option<bool> = match root.get("unique") {
+                Some(value) => {
+                    let f = value.as_bool().with_context(|| "Unique is not a bool")?;
+                    Some(f)
+                }
+                None => None,
+            };
+
+            Ok(MatchConfig { matching, fallback, unique })
         }
         _ => bail!("No root table found"),
     }
