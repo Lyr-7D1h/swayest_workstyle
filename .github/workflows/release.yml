@@ -7,6 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Install stable toolchain 
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - name: publish
         run: cargo publish --verbose
 
@@ -17,16 +21,13 @@ jobs:
         id: get_version
         run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
       - name: Checkout aur repo
-        uses: actions/checkout@v2
-        with:
-          repository: ssh://aur@aur.archlinux.org/sworkstyle.git
-      - name: Publish AUR package
-        uses: KSXGitHub/github-actions-deploy-aur@${{ steps.get_version.outputs.VERSION }}
-        with:
-          pkgname: sworkstyle
-          pkgbuild: ./PKGBUILD
-          commit_username: ${{ secrets.AUR_USERNAME }}
-          commit_email: ${{ secrets.AUR_EMAIL }}
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: git commit -m "Upgraded to version $VERSION"
-          ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
+        run: git clone ssh://aur@aur.archlinux.org/sworkstyle.git
+      - name: Update version
+        run: sed -i "s/pkgver=.*/pkgver=${{ steps.get_version.outputs.VERSION }}/g" PKGBUILD
+      - name: Update srcinfo using makepkg
+        uses: edlanglois/pkgbuild-action@v1
+      - name: Publish
+        run: |
+          git add .
+          git commit -m "Upgraded to version ${{ steps.get_version.outputs.VERSION }}"
+          git push
