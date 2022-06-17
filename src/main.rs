@@ -5,16 +5,12 @@ mod util;
 use std::process;
 
 use args::Args;
+use async_std::prelude::StreamExt;
 use config::Config;
 use fslock::LockFile;
-use futures_util::StreamExt;
 use log::{debug, error};
 use simple_logger::SimpleLogger;
-use swayipc::{
-    bail,
-    reply::{Node, NodeType},
-    Connection, EventType, Fallible,
-};
+use swayipc_async::{Connection, EventType, Fallible, Node, NodeType};
 
 /// Rescursively add nodes with node type floatingCon and con to windows
 fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
@@ -44,12 +40,12 @@ async fn update_workspace_name(
 
     let name = match &workspace.name {
         Some(name) => name,
-        None => bail!("Could not get name for workspace with id: {}", workspace.id),
+        None => panic!("Could not get name for workspace with id: {}", workspace.id),
     };
 
     let index = match workspace.num {
         Some(num) => num,
-        None => bail!("Could not fetch index for: {}", name),
+        None => panic!("Could not fetch index for: {}", name),
     };
 
     let mut icons = icons.join(" ");
@@ -141,7 +137,7 @@ fn check_already_running() {
     .expect("Could not set ctrlc handler")
 }
 
-#[tokio::main]
+#[async_std::main]
 async fn main() -> Fallible<()> {
     let args = Args::from_cli();
 

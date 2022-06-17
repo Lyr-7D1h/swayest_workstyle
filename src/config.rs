@@ -6,7 +6,7 @@ use super::util::prettify_option;
 use anyhow::{bail, Context, Error};
 use log::{error, info, warn};
 use regex::Regex;
-use swayipc::reply::Node;
+use swayipc_async::Node;
 use toml::Value;
 
 const DEFAULT_CONFIG: &'static [u8] = include_bytes!("default_config.toml");
