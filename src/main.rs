@@ -8,7 +8,8 @@ use args::Args;
 use config::Config;
 use fslock::LockFile;
 use futures_util::StreamExt;
-use log::{debug, error, log_enabled};
+use log::{debug, error};
+use simple_logger::SimpleLogger;
 use swayipc::{
     bail,
     reply::{Node, NodeType},
@@ -144,9 +145,10 @@ fn check_already_running() {
 async fn main() -> Fallible<()> {
     let args = Args::from_cli();
 
-    env_logger::init();
-
-    log_enabled!(args.log_level);
+    SimpleLogger::new()
+        .with_level(args.log_level)
+        .init()
+        .expect("Could not load simple logger");
 
     check_already_running();
 
