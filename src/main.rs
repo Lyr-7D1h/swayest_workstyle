@@ -36,10 +36,16 @@ async fn update_workspace_name(
     let mut windows = vec![];
     get_windows(workspace, &mut windows);
 
-    let icons: Vec<String> = windows
+    let mut icons: Vec<String> = windows
         .iter()
         .map(|node| config.fetch_icon(&node).to_string())
         .collect();
+
+    // remove duplicate icons
+    if config.match_config.unique == Some(true) {
+        icons.sort();
+        icons.dedup();
+    }
 
     let name = match &workspace.name {
         Some(name) => name,

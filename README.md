@@ -16,6 +16,8 @@ An executable similar to [workstyle](https://github.com/pierrechevalier83/workst
 
 - Fallback Icon
 
+- Unique option
+
 Your workspace shall never contain an empty icon again!
 
 **An example of what it does (using waybar which also hides the workspace index):**
@@ -78,6 +80,8 @@ Note that the crate [find_unicode](https://github.com/pierrechevalier83/find_uni
 
 For a reference to the regex syntax see the [regex](https://docs.rs/regex/1.5.4/regex/#syntax) crate
 
+The configuration contains an option called `unique` which defaults to `false`. When `unique` is set to `true`, `sworkstyle` will only show the unique icons on each workspace. In other words, icons within each workspace will never repeat. For example, if you have three identical applications open within the same workspace, only 1 icon will be present.
+
 ### Matching
 
 #### Standard
@@ -111,6 +115,7 @@ You can use {app_name} to do an exact match
 
 ```toml
 fallback = ''
+unique = false
 
 [matching]
 'discord' = ''
@@ -153,7 +158,7 @@ See [aur](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sworkstyle) for
 
 ## Roadmap
 
-- Allow multiple instances of a program to be displayed with only one icon `unique = true`
+- All current items on the roadmap have been completed.
 
 ## Known Issues
 
