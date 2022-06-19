@@ -4,10 +4,7 @@ use std::{fs::read_to_string, path::Path};
 
 use log::{debug, error};
 
-use self::{
-    config_error::{ConfigError, ConfigErrorKind},
-    match_config::MatchConfig,
-};
+use self::{config_error::ConfigError, match_config::MatchConfig};
 
 mod config_error;
 mod match_config;
@@ -38,12 +35,7 @@ fn get_user_config_content<P: AsRef<Path>>(
 
     let sworkstyle_config_dir = match dirs::config_dir() {
         Some(dir) => dir.join("sworkstyle"),
-        None => {
-            return Err(ConfigError::new(
-                ConfigErrorKind::InvalidFile,
-                "Could not find config directory",
-            ))
-        }
+        None => return Err(ConfigError::new("Could not find config directory")),
     };
 
     let sworkstyle_config_path = sworkstyle_config_dir.join("config.toml");
@@ -54,10 +46,9 @@ fn get_user_config_content<P: AsRef<Path>>(
 
     match read_to_string(&sworkstyle_config_path) {
         Ok(content) => Ok(Some(content)),
-        Err(e) => Err(ConfigError::new(
-            ConfigErrorKind::InvalidFile,
-            &format!("Could not open {sworkstyle_config_path:?}: {e}"),
-        )),
+        Err(e) => Err(ConfigError::new(&format!(
+            "Could not open {sworkstyle_config_path:?}: {e}"
+        ))),
     }
 }
 
