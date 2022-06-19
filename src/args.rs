@@ -1,10 +1,10 @@
-use std::{env, process};
+use std::{env, path::PathBuf, process};
 
 use log::LevelFilter;
 
 pub struct Args {
     pub log_level: LevelFilter,
-    pub config_path: Option<String>,
+    pub config_path: Option<PathBuf>,
 }
 
 impl Args {
@@ -31,7 +31,7 @@ FLAGS
     -l, --log-level
         Either \"error\", \"warn\", \"info\", \"debug\", \"off\". Uses \"warn\" by default
         
-    -c, --config
+    -c, --config 
         Specifies the config file to use.
         "
                     );
@@ -57,7 +57,12 @@ FLAGS
                 }
                 "-c" | "--config" => {
                     if let Some(path) = args.next() {
-                        config_path = Some(String::from(path));
+                        let path = PathBuf::from(path);
+                        if !path.exists() {
+                            eprintln!("Config file does not exist or couldn't be accessed");
+                            process::exit(1);
+                        }
+                        config_path = Some(path);
                     } else {
                         eprintln!("No path given");
                         process::exit(1);
