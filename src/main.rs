@@ -51,13 +51,17 @@ async fn update_workspace_name(
             }
 
             if let Some(exact_name) = exact_name {
-                config.fetch_icon(exact_name, node.name.as_ref()).to_string()
+                config
+                    .fetch_icon(exact_name, node.name.as_ref())
+                    .to_string()
             } else {
                 error!(
                     "No exact name found for app_id={:?} and title={:?}",
                     node.app_id, node.name
                 );
-                config.fetch_icon(&String::new(), node.name.as_ref()).to_string()
+                config
+                    .fetch_icon(&String::new(), node.name.as_ref())
+                    .to_string()
             }
         })
         .collect();
