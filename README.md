@@ -1,6 +1,7 @@
 # Swayest Workstyle
 
 [![AUR version](https://img.shields.io/aur/version/sworkstyle)](https://aur.archlinux.org/packages/sworkstyle)
+[![Crates.io](https://img.shields.io/crates/v/sworkstyle)](https://crates.io/crates/sworkstyle)
 
 Map workspace name to icons defined depending on the windows inside of the workspace.
 
