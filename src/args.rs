@@ -2,6 +2,8 @@ use std::{env, path::PathBuf, process};
 
 use log::LevelFilter;
 
+use crate::version::version;
+
 pub struct Args {
     pub log_level: LevelFilter,
     pub config_path: Option<PathBuf>,
@@ -27,6 +29,9 @@ SYNOPSIS
 FLAGS
     -h, --help
         Display a description of this program.
+    
+    -v, --version
+        Print the current version
 
     -l, --log-level
         Either \"error\", \"warn\", \"info\", \"debug\", \"off\". Uses \"warn\" by default
@@ -36,6 +41,11 @@ FLAGS
         "
                     );
                     process::exit(0);
+                }
+                "-v" | "--version" => {
+                    let v = version();
+                    println!("Swayest Workstyle v{v}");
+                    process::exit(0)
                 }
                 "-l" | "--log-level" => {
                     if let Some(level) = args.next() {
