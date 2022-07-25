@@ -9,7 +9,7 @@ use args::Args;
 use async_std::prelude::StreamExt;
 use config::Config;
 use fslock::LockFile;
-use log::{debug, error};
+use log::{debug, error, warn};
 use simple_logger::SimpleLogger;
 use swayipc_async::{Connection, EventType, Node, NodeType};
 
@@ -142,9 +142,15 @@ async fn subscribe_to_window_events(mut config: Config) -> Result<(), Box<dyn Er
     let mut con = Connection::new().await?;
 
     while let Some(event) = events.next().await {
-        if let Ok(_) = event {
-            if let Err(e) = update_workspaces(&mut con, &mut config).await {
-                error!("Could not update workspace name: {}", e);
+        match event {
+            Ok(_) => {
+                if let Err(e) = update_workspaces(&mut con, &mut config).await {
+                    error!("Could not update workspace name: {}", e);
+                }
+            }
+            Err(e) => {
+                warn!("Connection broken, exiting: {e}");
+                break;
             }
         }
     }
