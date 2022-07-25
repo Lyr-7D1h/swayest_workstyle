@@ -2,7 +2,7 @@ use std::{env, path::PathBuf, process};
 
 use log::LevelFilter;
 
-use crate::version::version;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct Args {
     pub log_level: LevelFilter,
@@ -19,7 +19,7 @@ impl Args {
             match &arg[..] {
                 "-h" | "--help" => {
                     println!(
-                        "Swayest Workstyle
+                        "Swayest Workstyle v{VERSION}
 This tool will rename workspaces to the icons configured.
 Config can be found in $HOME/.config/sworkstyle
 
@@ -43,8 +43,7 @@ FLAGS
                     process::exit(0);
                 }
                 "-v" | "--version" => {
-                    let v = version();
-                    println!("Swayest Workstyle v{v}");
+                    println!("{VERSION}");
                     process::exit(0)
                 }
                 "-l" | "--log-level" => {

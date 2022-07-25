@@ -1,7 +1,6 @@
 mod args;
 mod config;
 mod util;
-mod version;
 
 use std::{error::Error, process};
 
