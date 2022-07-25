@@ -5,7 +5,7 @@
 
 set -e
 
-# AUR_REPO=ssh://aur@aur.archlinux.org/sworkstyle.git
+AUR_REPO=ssh://aur@aur.archlinux.org/sworkstyle.git
 
 VERSION=$1
 
@@ -16,10 +16,10 @@ fi
 
 check_cargo() {
   echo "Cargo: validating"
-  # if ! test -f ~/.cargo/credentials; then
-  #   echo "~/.cargo/credentials does not exist"
-  #   exit 1
-  # fi
+  if ! test -f ~/.cargo/credentials; then
+    echo "~/.cargo/credentials does not exist"
+    exit 1
+  fi
   cargo publish --dry-run
 }
 
@@ -33,28 +33,28 @@ release_github() {
   gh release create $VERSION
 }
 
-# release_cargo() {
-#   echo "Cargo: publishing"
-#   cargo publish
-# }
+release_cargo() {
+  echo "Cargo: publishing"
+  cargo publish
+}
 
-# release_aur() {
-#   echo "AUR: creating temp"
-#   mkdir -p tmp
-#   cd tmp
+release_aur() {
+  echo "AUR: creating temp"
+  mkdir -p tmp
+  cd tmp
 
-#   echo "AUR: cloning and modifiying pkgver"
-#   git clone $AUR_REPO .
-#   sed -i "s/pkgver=.*/pkgver=$VERSION/g" PKGBUILD
-#   makepkg --printsrcinfo > .SRCINFO
-#   git add .
-#   git commit -m "Upgraded to version $VERSION"
-#   git push
+  echo "AUR: cloning and modifiying pkgver"
+  git clone $AUR_REPO .
+  sed -i "s/pkgver=.*/pkgver=$VERSION/g" PKGBUILD
+  makepkg --printsrcinfo > .SRCINFO
+  git add .
+  git commit -m "Upgraded to version $VERSION"
+  git push
 
-#   echo "AUR: removing tmp"
-#   cd ..
-#   rm -rf tmp
-# }
+  echo "AUR: removing tmp"
+  cd ..
+  rm -rf tmp
+}
 
 check_cargo
 check_github
@@ -63,7 +63,7 @@ git tag $VERSION
 git push origin --tags
 
 release_github
-# release_cargo
-# release_aur
+release_cargo
+release_aur
 
 echo "Release finished!"
