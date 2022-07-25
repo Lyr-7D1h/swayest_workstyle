@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
 # Don't forget to update Cargo.toml with the right version before running
-#
+# Manually release on aur due to setting of sha256sum
 
 set -e
 
-AUR_REPO=ssh://aur@aur.archlinux.org/sworkstyle.git
+# AUR_REPO=ssh://aur@aur.archlinux.org/sworkstyle.git
 
 VERSION=$1
 
@@ -38,23 +38,23 @@ release_cargo() {
   cargo publish
 }
 
-release_aur() {
-  echo "AUR: creating temp"
-  mkdir -p tmp
-  cd tmp
+# release_aur() {
+#   echo "AUR: creating tmp"
+#   mkdir -p tmp
+#   cd tmp
 
-  echo "AUR: cloning and modifiying pkgver"
-  git clone $AUR_REPO .
-  sed -i "s/pkgver=.*/pkgver=$VERSION/g" PKGBUILD
-  makepkg --printsrcinfo > .SRCINFO
-  git add .
-  git commit -m "Upgraded to version $VERSION"
-  git push
+#   echo "AUR: cloning and modifiying pkgver"
+#   git clone $AUR_REPO .
+#   sed -i "s/pkgver=.*/pkgver=$VERSION/g" PKGBUILD
+#   makepkg --printsrcinfo > .SRCINFO
+#   git add .
+#   git commit -m "Upgraded to version $VERSION"
+#   git push
 
-  echo "AUR: removing tmp"
-  cd ..
-  rm -rf tmp
-}
+#   echo "AUR: removing tmp"
+#   cd ..
+#   rm -rf tmp
+# }
 
 check_cargo
 check_github
@@ -64,6 +64,6 @@ git push origin --tags
 
 release_github
 release_cargo
-release_aur
+# release_aur
 
 echo "Release finished!"
