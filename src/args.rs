@@ -7,12 +7,14 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub struct Args {
     pub log_level: LevelFilter,
     pub config_path: Option<PathBuf>,
+    pub deduplicate: bool,
 }
 
 impl Args {
     pub fn from_cli() -> Args {
         let mut log_level = LevelFilter::Warn;
         let mut config_path = None;
+        let mut deduplicate = false;
 
         let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
@@ -38,6 +40,9 @@ FLAGS
         
     -c, --config 
         Specifies the config file to use.
+
+    -d, --deduplicate
+        Deduplicate the same icons in your workspace
         "
                     );
                     process::exit(0);
@@ -77,6 +82,9 @@ FLAGS
                         process::exit(1);
                     }
                 }
+                "-d" | "--deduplicate" => {
+                    deduplicate = true;
+                }
                 _ => {
                     eprintln!("Did not recognize \"{}\" as an option", arg);
                     process::exit(1);
@@ -87,6 +95,7 @@ FLAGS
         return Args {
             log_level,
             config_path,
+            deduplicate
         };
     }
 }

@@ -29,11 +29,12 @@ async fn update_workspace_name(
     conn: &mut Connection,
     config: &mut Config,
     workspace: &Node,
+    deduplicate: bool
 ) -> Result<(), Box<dyn Error>> {
     let mut windows = vec![];
     get_windows(workspace, &mut windows);
 
-    let icons: Vec<String> = windows
+    let mut icons: Vec<String> = windows
         .iter()
         .map(|node| {
             let mut exact_name: Option<&String> = None;
@@ -80,6 +81,10 @@ async fn update_workspace_name(
         None => return Err(format!("Could not fetch index for: {}", name).into()),
     };
 
+    if deduplicate {
+        icons.dedup();
+    }
+
     let mut icons = icons.join(" ");
     if icons.len() > 0 {
         icons.push_str(" ")
@@ -118,6 +123,7 @@ fn get_workspaces_recurse<'a>(node: &'a Node, workspaces: &mut Vec<&'a Node>) {
 async fn update_workspaces(
     conn: &mut Connection,
     config: &mut Config,
+    deduplicate: bool
 ) -> Result<(), Box<dyn Error>> {
     let tree = conn.get_tree().await?;
 
@@ -125,13 +131,13 @@ async fn update_workspaces(
     get_workspaces_recurse(&tree, &mut workspaces);
 
     for workspace in workspaces {
-        update_workspace_name(conn, config, workspace).await?;
+        update_workspace_name(conn, config, workspace, deduplicate).await?;
     }
 
     Ok(())
 }
 
-async fn subscribe_to_window_events(mut config: Config) -> Result<(), Box<dyn Error>> {
+async fn subscribe_to_window_events(mut config: Config, deduplicate: bool) -> Result<(), Box<dyn Error>> {
     debug!("Subscribing to window events");
     let mut events = Connection::new()
         .await?
@@ -143,7 +149,7 @@ async fn subscribe_to_window_events(mut config: Config) -> Result<(), Box<dyn Er
     while let Some(event) = events.next().await {
         match event {
             Ok(_) => {
-                if let Err(e) = update_workspaces(&mut con, &mut config).await {
+                if let Err(e) = update_workspaces(&mut con, &mut config, deduplicate).await {
                     error!("Could not update workspace name: {}", e);
                 }
             }
@@ -191,5 +197,5 @@ async fn main() {
 
     let config = Config::new(args.config_path);
 
-    subscribe_to_window_events(config).await.unwrap();
+    subscribe_to_window_events(config, args.deduplicate).await.unwrap();
 }

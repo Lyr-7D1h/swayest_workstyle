@@ -17,6 +17,8 @@ An executable similar to [workstyle](https://github.com/pierrechevalier83/workst
 
 - Fallback Icon
 
+- Deduplication
+
 Your workspace shall never contain an empty icon again!
 
 **An example of what it does (using waybar which also hides the workspace index):**
@@ -165,7 +167,7 @@ See [aur](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sworkstyle) for
 
 ## Roadmap
 
-- Allow multiple instances of a program to be displayed with only one icon `unique = true`
+- An `--unique` param where you only have a single icon per workspace based on the matching with biggest priority. 
 
 ## Known Issues
 
