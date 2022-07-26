@@ -114,7 +114,10 @@ You can use {app_name} to do an exact match
 
 ### Default Config
 
-The default config uses [font-awesome](https://fontawesome.com/) for icon mappinigs.
+The default config uses [font-awesome](https://fontawesome.com/) for icon mappinigs. 
+
+The default config is always appended to whatever custom config you define. 
+You can overwrite any matching or make a PR if you feel like a matching should be a default.
 
 ```toml
 fallback = ''
