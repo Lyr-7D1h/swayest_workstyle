@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
+#
+# A script that detect packages and creates a new release for them.
+# It makes a lot of assumptions so make sure all url's given in the
+# output makes sense before approving a release.
+#
 
 from abc import ABCMeta, abstractmethod
 from genericpath import exists
+import json
 from os import chdir
 import os
 import re
+from shutil import rmtree
 import subprocess
 import sys
-from typing import Dict, List, NoReturn, Optional, Tuple
+from tempfile import mkdtemp
+from typing import Dict, List, NoReturn, Optional
 from urllib.request import Request, urlopen
 
 
@@ -34,12 +42,14 @@ def exec(command: str) -> str:
     return res.stdout.decode("utf-8").rstrip()
 
 
-def request(url: str, headers: Optional[Dict[str, str]] = None) -> Tuple[int, str]:
+def request(url: str, headers: Optional[Dict[str, str]] = None) -> str:
     if headers == None:
         headers = {}
     req = Request(url, headers=headers)
     with urlopen(req) as response:
-        return response.status, str(response.read())
+        if response.status != 200:
+            error(f"{url} returned {response.status}")
+        return response.read().decode("utf-8")
 
 
 HOME = os.environ["HOME"]
@@ -63,7 +73,7 @@ class Module(metaclass=ABCMeta):
 
     @abstractmethod
     def validate(self) -> None:
-        """Validate that the module has everything it needs to release"""
+        """Validate that the module has everything it needs to release, to ensure successful release"""
 
     def pre_release(self) -> None:
         pass
@@ -90,14 +100,102 @@ class Github(Module):
 
 class Aur(Module):
     def should_load(self):
-        url = exec("git remote get-url origin")
-        exec("git --no-pager shortlog -sne")
+        repo_name = exec("git remote get-url origin")
+        git_username = exec("git config --get user.name")
+        repo_name = repo_name.split("/")[-1].split(".")[0]
+
+        data = request(
+            f"https://aur.archlinux.org/rpc/?v=5&type=search&arg={repo_name}"
+        )
+
+        data = json.loads(data)
+
+        results = data["results"]
+        filtered_results = []
+        for res in results:
+            if res["Maintainer"].lower() == git_username.lower():
+                filtered_results.append(res)
+        # Sort by popularity
+        filtered_results.sort(key=lambda r: r["Popularity"])
+
+        if len(filtered_results) == 0:
+            return False
+
+        self.package = filtered_results[0].get("Name")
+        self.maintainer = filtered_results[0].get("Maintainer")
+        return True
+
+    def link(self):
+        return f"https://aur.archlinux.org/packages/{self.package}"
 
     def validate(self):
-        exec("gh auth status")
+        # Check if can push to AUR
+        tmp = mkdtemp()
+        root_path = os.getcwd()
+        chdir(tmp)
+        exec(f"git clone ssh://aur@aur.archlinux.org/{self.package}.git .")
+        exec("git push --dry-run")
+        exec("makepkg --help")
+        chdir(root_path)
+        rmtree(tmp)
+
+    def _sha256sums(self, pkgbuild: str) -> str:
+        info("Generating sha256sums")
+        pkgbuild_lines = pkgbuild.splitlines()
+        sha_lines = []  # all lines containing sha's
+        check_ending = False
+        for i, line in enumerate(pkgbuild_lines):
+            if check_ending:
+                sha_lines.append(i)
+                if ")" in line:
+                    check_ending = False
+            if line.startswith("sha256sums="):
+                sha_lines.append(i)
+                if ")" in line:
+                    break
+                check_ending = True
+        # generate sums
+        sum = exec("makepkg -g -f -p PKGBUILD")
+        # remove old sums
+        sha_lines.reverse()  # remove from big to small
+        for i in sha_lines:
+            del pkgbuild_lines[i]
+        pkgbuild = ""
+        # inject new sum in new pkgbuild
+        for i, line in enumerate(pkgbuild_lines):
+            if i == sha_lines[0] - 1:
+                pkgbuild += sum + "\n"
+            pkgbuild += line + "\n"
+        return pkgbuild.rstrip()
 
     def release(self):
-        exec(f"gh release create {VERSION}")
+        tmp = mkdtemp()
+        info(f"Created {tmp}")
+        root_path = os.getcwd()
+        chdir(tmp)
+        exec(f"git clone ssh://aur@aur.archlinux.org/{self.package}.git .")
+
+        with open("PKGBUILD", "r") as file:
+            pkgbuild: str = file.read()
+        pkgbuild = re.sub(
+            "^pkgver\\s*=.*", f"pkgver={VERSION}", pkgbuild, 1, re.MULTILINE
+        )
+        pkgbuild = re.sub("^pkgrel\\s*=.*", f"pkgrel=1", pkgbuild, 1, re.MULTILINE)
+
+        if re.search("^sha256sums\\s*=", pkgbuild, re.MULTILINE):
+            pkgbuild = self._sha256sums(pkgbuild)
+
+        with open("PKGBUILD", "w") as file:
+            file.write(pkgbuild)
+
+        exec("makepkg --printsrcinfo > .SRCINFO")
+        exec("makepkg --check")  # Ensure install works
+        # exec("git add PKGBUILD")
+        # exec(f"git commit -m 'Release {VERSION}'")
+        # exec("git push")
+
+        # chdir(root_path)
+        # rmtree(tmp)
 
 
 class Cargo(Module):
@@ -109,15 +207,9 @@ class Cargo(Module):
             name = re.search("^name\\s*=.*", file.read(), re.MULTILINE)
             if name is None:
                 error("Could not find crate name")
-            name = str(name).split("=")[1].replace(" ", "")
+            name = str(name.group(0)).split("=")[1].replace(" ", "").replace('"', "")
 
-        link = f"https://crates.io/crates/{name}"
-        [_, content] = request(link, {"Accept": "text/html"})
-
-        if "Not Found" in content:
-            warn(f"{link} does not exist")
-
-        return
+        return f"https://crates.io/crates/{name}"
 
     def validate(self):
         if not exists(f"{HOME}/.cargo/credentials"):
@@ -131,10 +223,14 @@ class Cargo(Module):
         info("Updating version in Cargo.toml")
         with open("Cargo.toml", "r") as file:
             cargo_toml: str = file.read()
-        cargo_toml = re.sub("^version\\s*=.*", f'version = "{VERSION}"', cargo_toml)
+        cargo_toml = re.sub(
+            "^version\\s*=.*", f'version = "{VERSION}"', cargo_toml, 1, re.MULTILINE
+        )
         with open("Cargo.toml", "w") as file:
             file.write(cargo_toml)
         exec("git add Cargo.toml")
+        exec(f"git commit -m 'Release {VERSION}")
+        exec("git push -u")
 
     def release(self):
         exec(f"cargo publish")
@@ -152,6 +248,9 @@ def prepare_branch():
     return remote
 
 
+DEFAULT_MODULES = [Cargo(), Github(), Aur()]
+
+
 def release():
     root = exec("git rev-parse --show-toplevel")
     info(f"Moving to root '{root}'")
@@ -163,7 +262,7 @@ def release():
     prepare_branch()
 
     modules: List[Module] = []
-    for module in [Github(), Cargo()]:
+    for module in DEFAULT_MODULES:
         if module.should_load():
             info(f"Found {module.name()}")
             modules.append(module)
@@ -174,17 +273,20 @@ def release():
     for module in modules:
         info(f"Will release on {module.name()} ({module.link()})")
 
-    answer = input("Proceed with release? [Y/n]")
+    answer = input("Proceed with release? [Y/n] ")
     if answer.lower() != "y":
         error("")
 
-    # for module in modules:
-    #     module.pre_release()
+    for module in modules:
+        module.pre_release()
 
     # exec(f"git tag {VERSION}")
     # exec(f"git push {remote} --tags")
-    # for module in modules:
-    #     module.release()
+    for module in modules:
+        module.release()
 
 
-release()
+# release()
+aur = Aur()
+aur.should_load()
+aur.release()
