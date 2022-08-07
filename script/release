@@ -258,6 +258,7 @@ def prepare_branch() -> str:
 
     exec(f"git switch {branch}")
     exec(f"git pull {remote} {branch}")
+    exec(f"git push -u {remote} {branch}")
     return remote
 
 
