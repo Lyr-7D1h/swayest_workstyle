@@ -38,7 +38,7 @@ def info(*args: str) -> None:
 
 def exec(command: str) -> str:
     debug(f"Executing '{command}'")
-    res = subprocess.run(command.split(" "), capture_output=True)
+    res = subprocess.run(command, capture_output=True, shell=True)
     if res.returncode != 0:
         error(
             f"Command failed with code {res.returncode}\n", res.stderr.decode("utf-8")
@@ -243,7 +243,7 @@ class Cargo(Module):
 
         exec("git add Cargo.toml Cargo.lock")
         exec(f"git commit -m 'Release {VERSION}'")
-        exec("git push -u")
+        exec("git push")
 
     def release(self):
         exec(f"cargo publish")
