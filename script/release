@@ -242,7 +242,7 @@ class Cargo(Module):
         exec("cargo build --release --offline")
 
         exec("git add Cargo.toml Cargo.lock")
-        if exec("git diff") == "":
+        if exec("git diff") != "":
             exec(f"git commit -m 'Release {VERSION}'")
             exec("git push")
 
