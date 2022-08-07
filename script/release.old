@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+#
+# Validate and test the app and make a new release on Cargo, Github and AUR
+#
+
+set -euo pipefail
+
+AUR_REPO=ssh://aur@aur.archlinux.org/sworkstyle.git
+GITHUB_URL=https://github.com/Lyr-7D1h/swayest_workstyle
+
+if [[ ! $1 =~ ^[0-9]*\.[0-9]*\.[0-9]*$ ]]; then
+  echo "No version given"
+  exit 1
+fi
+
+VERSION=$1
+
+check_cargo() {
+  echo "Cargo: validating"
+  if ! test -f ~/.cargo/credentials; then
+    echo "~/.cargo/credentials does not exist"
+    exit 1
+  fi
+  cargo test
+  cargo build --release --locked
+  cargo publish --dry-run
+}
+
+check_github() {
+  echo "Github: validating"
+  gh auth status
+}
+
+update_cargo_toml() {
+  sed -i "s/^version\s*=.*/version = \"$VERSION\"/g" Cargo.toml
+  git switch master
+  git pull master
+  git add Cargo.toml
+  git commit -m "Release $VERSION"
+  git push -u 
+}
+
+release_github() {
+  echo "Github: creating release"
+  gh release create $VERSION
+}
+
+release_cargo() {
+  echo "Cargo: publishing"
+  cargo publish
+}
+
+release_aur() {
+  echo "AUR: creating temporary directory"
+  TEMP=$(mktmp)
+  echo "AUR: Moving to $TEMP"
+  cd $TEMP
+
+  echo "AUR: cloning and modifiying pkgver"
+  git clone $AUR_REPO .
+  sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
+  sed -i "s/^pkgrel=.*/pkgrel=1" 
+  if grep -E '^sha256sums=' PKGBUILD &> /dev/null; then
+    echo "Found sha256sums"
+  fi
+  makepkg --printsrcinfo > .SRCINFO
+  git add .
+  git commit -m "Upgraded to version $VERSION"
+  git push
+
+  echo "AUR: removing tmp"
+  cd ..
+  rm -rf tmp
+}
+
+check_cargo
+check_github
+
+update_cargo_toml
+
+git tag $VERSION
+git push origin --tags
+
+release_github
+release_cargo
+release_aur
+
+echo "Release finished!"
