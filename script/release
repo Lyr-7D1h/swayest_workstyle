@@ -238,11 +238,10 @@ class Cargo(Module):
         with open("Cargo.toml", "w") as file:
             file.write(cargo_toml)
 
-        # Update lock file
-        exec("cargo build --release --offline")
-
-        exec("git add Cargo.toml Cargo.lock")
         if exec("git diff") != "":
+            # Update lock file
+            exec("cargo build --release --offline")
+            exec("git add Cargo.toml Cargo.lock")
             exec(f"git commit -m 'Release {VERSION}'")
             exec("git push")
 
