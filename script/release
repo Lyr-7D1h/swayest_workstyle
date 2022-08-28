@@ -99,7 +99,7 @@ class Github(Module):
         exec("gh auth status")
 
     def release(self):
-        notes = input("Github Release notes: ")
+        notes = input("\033[92mGithub Release notes: \033[0m")
         exec(f"gh release create {VERSION} --notes '{notes}'")
 
 
@@ -298,6 +298,7 @@ def release():
     exec(f"git push {remote} --tags")
     for module in modules:
         module.release()
+    info(f"Release {VERSION} finished")
 
 
 release()
