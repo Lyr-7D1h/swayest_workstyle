@@ -29,7 +29,7 @@ async fn update_workspace_name(
     conn: &mut Connection,
     config: &mut Config,
     workspace: &Node,
-    deduplicate: bool
+    deduplicate: bool,
 ) -> Result<(), Box<dyn Error>> {
     let mut windows = vec![];
     get_windows(workspace, &mut windows);
@@ -123,7 +123,7 @@ fn get_workspaces_recurse<'a>(node: &'a Node, workspaces: &mut Vec<&'a Node>) {
 async fn update_workspaces(
     conn: &mut Connection,
     config: &mut Config,
-    deduplicate: bool
+    deduplicate: bool,
 ) -> Result<(), Box<dyn Error>> {
     let tree = conn.get_tree().await?;
 
@@ -137,7 +137,10 @@ async fn update_workspaces(
     Ok(())
 }
 
-async fn subscribe_to_window_events(mut config: Config, deduplicate: bool) -> Result<(), Box<dyn Error>> {
+async fn subscribe_to_window_events(
+    mut config: Config,
+    deduplicate: bool,
+) -> Result<(), Box<dyn Error>> {
     debug!("Subscribing to window events");
     let mut events = Connection::new()
         .await?
@@ -197,5 +200,7 @@ async fn main() {
 
     let config = Config::new(args.config_path);
 
-    subscribe_to_window_events(config, args.deduplicate).await.unwrap();
+    subscribe_to_window_events(config, args.deduplicate)
+        .await
+        .expect("failed to read window events");
 }
