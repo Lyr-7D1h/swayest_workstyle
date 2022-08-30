@@ -65,6 +65,8 @@ async fn update_workspace_name(
                     .to_string()
             }
         })
+        // Overwrite right to left characters: https://www.unicode.org/versions/Unicode12.0.0/UnicodeStandard-12.0.pdf#G26.16327
+        .map(|icon| format!("\u{202D}{icon}\u{202C}"))
         .collect();
 
     let name = match &workspace.name {
