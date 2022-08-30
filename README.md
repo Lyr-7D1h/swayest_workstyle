@@ -59,7 +59,7 @@ exec sworkstyle &> /tmp/sworkstyle.log
 
 > **_NOTE:_** When using the cargo install make sure to add the `.cargo/bin` to the `PATH` environment variable before executing sway. You can do this by adding `export PATH="$HOME/.cargo/bin:$PATH"` to `.zprofile` or `.profile`
 
-You should also configure anything mentioning a workspace (assign, keybinding) to use numbered workspaces. This is because sworkstyle will rename your workspaces many times so it needs a constant number that doesn't change in order to work correctly.
+You should configure anything mentioning a workspace (assign, keybinding) to use numbered workspaces. This is because sworkstyle will rename your workspaces many times so it needs a constant number that doesn't change in order to work correctly.
 
 Prefer
 
