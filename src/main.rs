@@ -4,12 +4,13 @@ mod util;
 
 use async_std::prelude::*;
 use futures::poll;
+use inotify::{Inotify, WatchMask};
 use std::{error::Error, process, task::Poll, thread, time::Duration};
 
 use args::Args;
 use config::Config;
 use fslock::LockFile;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use simple_logger::SimpleLogger;
 use swayipc_async::{Connection, EventType, Node, NodeType};
 
@@ -29,8 +30,8 @@ fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
 async fn update_workspace_name(
     conn: &mut Connection,
     config: &Config,
+    args: &Args,
     workspace: &Node,
-    deduplicate: bool,
 ) -> Result<(), Box<dyn Error>> {
     let mut windows = vec![];
     get_windows(workspace, &mut windows);
@@ -84,7 +85,7 @@ async fn update_workspace_name(
         None => return Err(format!("Could not fetch index for: {}", name).into()),
     };
 
-    if deduplicate {
+    if args.deduplicate {
         icons.dedup();
     }
 
@@ -126,7 +127,7 @@ fn get_workspaces_recurse<'a>(node: &'a Node, workspaces: &mut Vec<&'a Node>) {
 async fn update_workspaces(
     conn: &mut Connection,
     config: &Config,
-    deduplicate: bool,
+    args: &Args,
 ) -> Result<(), Box<dyn Error>> {
     let tree = conn.get_tree().await?;
 
@@ -134,7 +135,7 @@ async fn update_workspaces(
     get_workspaces_recurse(&tree, &mut workspaces);
 
     for workspace in workspaces {
-        update_workspace_name(conn, config, workspace, deduplicate).await?;
+        update_workspace_name(conn, config, args, workspace).await?;
     }
 
     Ok(())
@@ -161,12 +162,22 @@ fn check_already_running() {
     .expect("Could not set ctrlc handler")
 }
 
-async fn main_loop(config: Config, args: &Args) -> Result<(), Box<dyn Error>> {
+async fn main_loop(mut config: Config, args: &Args) -> Result<(), Box<dyn Error>> {
     let mut events = Connection::new()
         .await?
         .subscribe(&[EventType::Window])
         .await?;
     let mut connection = Connection::new().await?;
+
+    let mut inotify = Inotify::init().expect("Error while initializing inotify instance");
+    if let Some(config_path) = &args.config_path {
+        if config_path.exists() {
+            inotify
+                .add_watch(config_path, WatchMask::CLOSE_WRITE)
+                .expect("Failed to watch config file");
+        }
+    }
+    let mut inotify_events_buffer = [0; 1024];
 
     loop {
         let p = poll!(events.next());
@@ -175,9 +186,7 @@ async fn main_loop(config: Config, args: &Args) -> Result<(), Box<dyn Error>> {
             if let Poll::Ready(Some(event)) = p {
                 match event {
                     Ok(_) => {
-                        if let Err(e) =
-                            update_workspaces(&mut connection, &config, args.deduplicate).await
-                        {
+                        if let Err(e) = update_workspaces(&mut connection, &config, args).await {
                             error!("Could not update workspace name: {}", e);
                         }
                     }
@@ -189,7 +198,21 @@ async fn main_loop(config: Config, args: &Args) -> Result<(), Box<dyn Error>> {
             }
         }
 
-        thread::sleep(Duration::from_millis(20));
+        if let Ok(_) = inotify.read_events(&mut inotify_events_buffer) {
+            info!("Detected config change, reloading config..");
+            config = Config::new(args.config_path.as_ref());
+
+            // Reset watcher
+            if let Some(config_path) = &args.config_path {
+                if config_path.exists() {
+                    inotify
+                        .add_watch(config_path, WatchMask::CLOSE_WRITE)
+                        .expect("Failed to watch config file");
+                }
+            }
+        }
+
+        thread::sleep(Duration::from_millis(100));
     }
 }
 

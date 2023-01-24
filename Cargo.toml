@@ -11,7 +11,7 @@ readme = "README.md"
 
 
 [dependencies]
-swayipc-async = "2.0.0"
+swayipc-async = "2.0.1"
 async-std = { version = "1.10.0", features = ["attributes"]}
 futures = "0.3.25"
 toml = { version = "0.5.8", features = ["preserve_order"] }

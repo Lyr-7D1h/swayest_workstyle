@@ -126,7 +126,7 @@ impl Config {
 }
 
 impl<S: Into<String>> From<S> for Config {
-    /// Parse a string to a config replacing fallback with the default one if not given
+    /// Parse a string to a config enriching it with the default config
     fn from(value: S) -> Self {
         let value = value.into();
         let mut default = Config::default();
