@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 
+use regex::Regex;
 use toml::Value;
 
 use super::{config_error::ConfigError, Config, Match, Pattern};
