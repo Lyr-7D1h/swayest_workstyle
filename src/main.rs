@@ -2,10 +2,11 @@ mod args;
 mod config;
 mod util;
 
-use std::{error::Error, process};
+use async_std::prelude::*;
+use futures::poll;
+use std::{error::Error, process, task::Poll, thread, time::Duration};
 
 use args::Args;
-use async_std::prelude::StreamExt;
 use config::Config;
 use fslock::LockFile;
 use log::{debug, error, warn};
@@ -27,7 +28,7 @@ fn get_windows<'a>(node: &'a Node, windows: &mut Vec<&'a Node>) {
 
 async fn update_workspace_name(
     conn: &mut Connection,
-    config: &mut Config,
+    config: &Config,
     workspace: &Node,
     deduplicate: bool,
 ) -> Result<(), Box<dyn Error>> {
@@ -124,7 +125,7 @@ fn get_workspaces_recurse<'a>(node: &'a Node, workspaces: &mut Vec<&'a Node>) {
 
 async fn update_workspaces(
     conn: &mut Connection,
-    config: &mut Config,
+    config: &Config,
     deduplicate: bool,
 ) -> Result<(), Box<dyn Error>> {
     let tree = conn.get_tree().await?;
@@ -137,35 +138,6 @@ async fn update_workspaces(
     }
 
     Ok(())
-}
-
-async fn subscribe_to_window_events(
-    mut config: Config,
-    deduplicate: bool,
-) -> Result<(), Box<dyn Error>> {
-    debug!("Subscribing to window events");
-    let mut events = Connection::new()
-        .await?
-        .subscribe(&[EventType::Window])
-        .await?;
-
-    let mut con = Connection::new().await?;
-
-    while let Some(event) = events.next().await {
-        match event {
-            Ok(_) => {
-                if let Err(e) = update_workspaces(&mut con, &mut config, deduplicate).await {
-                    error!("Could not update workspace name: {}", e);
-                }
-            }
-            Err(e) => {
-                warn!("Connection broken, exiting: {e}");
-                break;
-            }
-        }
-    }
-
-    return Ok(());
 }
 
 fn check_already_running() {
@@ -189,6 +161,38 @@ fn check_already_running() {
     .expect("Could not set ctrlc handler")
 }
 
+async fn main_loop(config: Config, args: &Args) -> Result<(), Box<dyn Error>> {
+    let mut events = Connection::new()
+        .await?
+        .subscribe(&[EventType::Window])
+        .await?;
+    let mut connection = Connection::new().await?;
+
+    loop {
+        let p = poll!(events.next());
+
+        if p.is_ready() {
+            if let Poll::Ready(Some(event)) = p {
+                match event {
+                    Ok(_) => {
+                        if let Err(e) =
+                            update_workspaces(&mut connection, &config, args.deduplicate).await
+                        {
+                            error!("Could not update workspace name: {}", e);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Connection broken, exiting: {e}");
+                        return Err(Box::new(e));
+                    }
+                }
+            }
+        }
+
+        thread::sleep(Duration::from_millis(20));
+    }
+}
+
 #[async_std::main]
 async fn main() {
     let args = Args::from_cli();
@@ -200,9 +204,9 @@ async fn main() {
 
     check_already_running();
 
-    let config = Config::new(args.config_path);
+    let config = Config::new(args.config_path.as_ref());
 
-    subscribe_to_window_events(config, args.deduplicate)
-        .await
-        .expect("failed to read window events");
+    if let Err(e) = main_loop(config, &args).await {
+        error!("{e}")
+    }
 }

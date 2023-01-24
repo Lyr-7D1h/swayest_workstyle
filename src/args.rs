@@ -40,10 +40,10 @@ FLAGS
     -v, --version
         Print the current version
 
-    -l, --log-level
+    -l, --log-level <level>
         Either \"error\", \"warn\", \"info\", \"debug\", \"off\". Uses \"warn\" by default
         
-    -c, --config 
+    -c, --config <file>
         Specifies the config file to use. Uses \"`XDG_CONFIG_HOME`/sworkstyle/config\" by default
 
     -d, --deduplicate
