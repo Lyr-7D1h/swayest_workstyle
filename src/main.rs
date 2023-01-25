@@ -5,7 +5,7 @@ mod util;
 use async_std::prelude::*;
 use futures::poll;
 use inotify::{Inotify, WatchMask};
-use std::{error::Error, process, task::Poll, thread, time::Duration};
+use std::{collections::BTreeSet, error::Error, process, task::Poll, thread, time::Duration};
 
 use args::Args;
 use config::Config;
@@ -36,7 +36,7 @@ async fn update_workspace_name(
     let mut windows = vec![];
     get_windows(workspace, &mut windows);
 
-    let mut icons: Vec<String> = windows
+    let mut window_names: Vec<(Option<&String>, Option<String>)> = windows
         .iter()
         .map(|node| {
             let mut exact_name: Option<&String> = None;
@@ -53,17 +53,32 @@ async fn update_workspace_name(
                 }
             }
 
+            (exact_name, node.name.clone())
+        })
+        .collect();
+
+    if args.deduplicate {
+        window_names = window_names
+            .into_iter()
+            .collect::<BTreeSet<(Option<&String>, Option<String>)>>()
+            .into_iter()
+            .collect();
+    }
+
+    let mut icons: Vec<String> = window_names
+        .into_iter()
+        .map(|(exact_name, generic_name)| {
             if let Some(exact_name) = exact_name {
                 config
-                    .fetch_icon(exact_name, node.name.as_ref())
+                    .fetch_icon(exact_name, generic_name.as_ref())
                     .to_string()
             } else {
                 error!(
-                    "No exact name found for app_id={:?} and title={:?}",
-                    node.app_id, node.name
+                    "No exact name found for window with title={:?}",
+                    generic_name
                 );
                 config
-                    .fetch_icon(&String::new(), node.name.as_ref())
+                    .fetch_icon(&String::new(), generic_name.as_ref())
                     .to_string()
             }
         })

@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 
-use regex::Regex;
 use toml::Value;
 
 use super::{config_error::ConfigError, Config, Match, Pattern};
@@ -101,6 +100,8 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
 
 #[test]
 fn test_parse_content_to_config() {
+    use regex::Regex;
+
     let no_match_table = parse_content_to_config(&String::from("fallback = 'c'"));
 
     assert_eq!(
