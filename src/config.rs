@@ -1,4 +1,9 @@
-use std::{convert::TryFrom, fs::read_to_string, path::Path, str::from_utf8};
+use std::{
+    convert::TryFrom,
+    fs::read_to_string,
+    path::{Path, PathBuf},
+    str::from_utf8,
+};
 
 use log::{debug, error, info, warn};
 use regex::Regex;
@@ -52,12 +57,12 @@ pub enum Match {
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    matchings: Vec<Match>,
-    fallback: Option<String>,
+    pub matchings: Vec<Match>,
+    pub fallback: Option<String>,
 }
 
 impl Config {
-    pub fn new<P: AsRef<Path>>(config_path: Option<P>) -> Config {
+    pub fn new<P: AsRef<Path>>(config_path: &Option<P>) -> Config {
         if let Some(config_path) = config_path {
             match read_to_string(&config_path) {
                 Ok(content) => return Config::from(content),
