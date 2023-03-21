@@ -173,6 +173,7 @@ See [aur](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sworkstyle) for
 ## Roadmap
 
 - An `--unique` param where you only have a single icon per workspace based on the matching with biggest priority. 
+- Add hyprland support
 
 ## Known Issues
 
