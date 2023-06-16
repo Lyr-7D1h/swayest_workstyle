@@ -186,7 +186,12 @@ impl Sworkstyle {
             icons.dedup();
         }
 
-        let mut icons = icons.join(" ");
+        let delim = self.config.separator
+            .as_deref()
+            .unwrap_or(" ");
+
+        let mut icons = icons.join(delim);
+
         if icons.len() > 0 {
             icons.push_str(" ")
         }

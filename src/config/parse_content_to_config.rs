@@ -89,9 +89,20 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
                 None => None,
             };
 
+            let separator: Option<String> = match root.get("separator") {
+                Some(value) => {
+                    let f = value
+                        .as_str()
+                        .ok_or(ConfigError::new("Separator is not a string"))?;
+                    Some(f.to_string())
+                }
+                None => None,
+            };
+
             Ok(Config {
                 matchings: matching,
                 fallback,
+                separator,
             })
         }
         _ => Err(ConfigError::new("No root table found")),

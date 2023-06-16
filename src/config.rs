@@ -59,6 +59,7 @@ pub enum Match {
 pub struct Config {
     pub matchings: Vec<Match>,
     pub fallback: Option<String>,
+    pub separator: Option<String>,
 }
 
 impl Config {
