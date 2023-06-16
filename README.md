@@ -128,6 +128,7 @@ You can overwrite any matching or make a PR if you feel like a matching should b
 
 ```toml
 fallback = ''
+separator = ' '
 
 [matching]
 'discord' = ''

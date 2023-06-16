@@ -1,9 +1,4 @@
-use std::{
-    convert::TryFrom,
-    fs::read_to_string,
-    path::{Path},
-    str::from_utf8,
-};
+use std::{convert::TryFrom, fs::read_to_string, path::Path, str::from_utf8};
 
 use log::{debug, error, info, warn};
 use regex::Regex;
@@ -140,6 +135,10 @@ impl<S: Into<String>> From<S> for Config {
         match parse_content_to_config(&value) {
             Ok(mut user_config) => {
                 user_config.matchings.append(&mut default.matchings);
+
+                if user_config.separator.is_none() {
+                    user_config.separator = default.separator
+                }
 
                 if user_config.fallback.is_none() {
                     warn!(
