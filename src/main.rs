@@ -1,13 +1,12 @@
-use async_std::prelude::*;
-use futures::poll;
-use inotify::{Inotify, WatchMask};
-use std::{collections::BTreeSet, process, task::Poll, thread, time::Duration};
-use sworkstyle::{config::Config, Sworkstyle};
+
+
+use std::{process};
+use sworkstyle::{Sworkstyle};
 
 use fslock::LockFile;
-use log::{debug, error, info, warn};
+use log::{debug, error};
 use simple_logger::SimpleLogger;
-use swayipc_async::{Connection, EventType, Node, NodeType};
+
 
 use std::{env, path::PathBuf};
 

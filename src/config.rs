@@ -1,7 +1,7 @@
 use std::{
     convert::TryFrom,
     fs::read_to_string,
-    path::{Path, PathBuf},
+    path::{Path},
     str::from_utf8,
 };
 
