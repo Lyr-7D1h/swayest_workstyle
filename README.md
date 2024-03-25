@@ -175,8 +175,8 @@ See [aur](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sworkstyle) for
 ## Roadmap
 
 - An `--unique` param where you only have a single icon per workspace based on the matching with biggest priority. 
-- Add hyprland support
 
 ## Known Issues
 
 - Using sway's alt-tab behavior can cause a workspace to be not named
+- Does not work on hyprland, use this instead: https://github.com/hyprland-community/hyprland-autoname-workspaces
