@@ -2,13 +2,13 @@ use async_std::prelude::*;
 use futures::poll;
 use inotify::{Inotify, WatchMask};
 use std::{
-    collections::BTreeSet,
     error::Error,
     path::{Path, PathBuf},
     task::Poll,
     thread,
     time::Duration,
 };
+use std::collections::HashSet;
 
 use log::{debug, error, info, warn};
 use swayipc_async::{Connection, EventType, Node, NodeType};
@@ -25,10 +25,11 @@ pub struct Sworkstyle {
     config_path: Option<PathBuf>,
     inotify: Option<Inotify>,
     deduplicate: bool,
+    focused_color: Option<String>,
 }
 
 impl Sworkstyle {
-    pub fn new<P: AsRef<Path>>(config_path: Option<P>, deduplicate: bool) -> Sworkstyle {
+    pub fn new<P: AsRef<Path>>(config_path: Option<P>, deduplicate: bool, focused_color: Option<String>) -> Sworkstyle {
         let inotify = config_path
             .as_ref()
             .map(|path| {
@@ -50,6 +51,7 @@ impl Sworkstyle {
             config_path: config_path.map(|p| p.as_ref().to_path_buf()),
             inotify,
             deduplicate,
+            focused_color,
         }
     }
 
@@ -118,7 +120,7 @@ impl Sworkstyle {
         let mut windows = vec![];
         get_windows(workspace, &mut windows);
 
-        let mut window_names: Vec<(Option<&String>, Option<String>)> = windows
+        let window_names: Vec<(Option<&String>, Option<String>, bool)> = windows
             .iter()
             .map(|node| {
                 let mut exact_name: Option<&String> = None;
@@ -135,22 +137,14 @@ impl Sworkstyle {
                     }
                 }
 
-                (exact_name, node.name.clone())
+                (exact_name, node.name.clone(), node.focused)
             })
             .collect();
 
-        if self.deduplicate {
-            window_names = window_names
-                .into_iter()
-                .collect::<BTreeSet<(Option<&String>, Option<String>)>>()
-                .into_iter()
-                .collect();
-        }
-
-        let mut icons: Vec<String> = window_names
+        let icons_iter = window_names
             .into_iter()
-            .map(|(exact_name, generic_name)| {
-                if let Some(exact_name) = exact_name {
+            .map(|(exact_name, generic_name, focused)| {
+                let icon = if let Some(exact_name) = exact_name {
                     self.config
                         .fetch_icon(exact_name, generic_name.as_ref())
                         .to_string()
@@ -162,6 +156,13 @@ impl Sworkstyle {
                     self.config
                         .fetch_icon(&String::new(), generic_name.as_ref())
                         .to_string()
+                };
+                if focused {
+                    self.focused_color.as_ref().map(|color| {
+                        format!("<span color='{color}'>{icon}</span>")
+                    }).unwrap_or(icon)
+                } else {
+                    format!("\u{202D}{icon}\u{202C}")
                 }
             })
             .filter(|icon| !icon.is_empty())
@@ -186,7 +187,7 @@ impl Sworkstyle {
             None => {
                 return Err(
                     format!("Could not get name for workspace with id: {}", workspace.id).into(),
-                )
+                );
             }
         };
 
@@ -194,10 +195,6 @@ impl Sworkstyle {
             Some(num) => num,
             None => return Err(format!("Could not fetch index for: {}", name).into()),
         };
-
-        if self.deduplicate {
-            icons.dedup();
-        }
 
         let delim = self.config.separator
             .as_deref()

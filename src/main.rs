@@ -1,5 +1,3 @@
-
-
 use std::{process};
 use sworkstyle::{Sworkstyle};
 
@@ -18,6 +16,7 @@ pub struct Args {
     pub log_level: LevelFilter,
     pub config_path: Option<PathBuf>,
     pub deduplicate: bool,
+    pub focused_color: Option<String>,
 }
 
 /// Get the xdg default config path
@@ -30,6 +29,7 @@ impl Args {
         let mut log_level = LevelFilter::Warn;
         let mut config_path = default_config_path();
         let mut deduplicate = false;
+        let mut focused_color = None;
 
         let mut args = env::args().skip(1);
         while let Some(arg) = args.next() {
@@ -58,6 +58,10 @@ FLAGS
 
     -d, --deduplicate
         Deduplicate the same icons in your workspace
+
+    -f, --focused-color <color>
+        Sets the color of the focused icon
+
         "
                     );
                     process::exit(0);
@@ -100,6 +104,9 @@ FLAGS
                 "-d" | "--deduplicate" => {
                     deduplicate = true;
                 }
+                "-f" | "--focus-color" => {
+                    focused_color = args.next()
+                }
                 _ => {
                     eprintln!("Did not recognize \"{}\" as an option", arg);
                     process::exit(1);
@@ -111,9 +118,11 @@ FLAGS
             log_level,
             config_path,
             deduplicate,
+            focused_color,
         };
     }
 }
+
 fn acquire_lock() {
     let mut file = match LockFile::open("/tmp/sworkstyle.lock") {
         Ok(f) => f,
@@ -132,7 +141,7 @@ fn acquire_lock() {
         file.unlock().unwrap();
         process::exit(0)
     })
-    .expect("Could not set ctrlc handler")
+        .expect("Could not set ctrlc handler")
 }
 
 #[async_std::main]
@@ -146,7 +155,7 @@ async fn main() {
 
     acquire_lock();
 
-    if let Err(e) = Sworkstyle::new(args.config_path, args.deduplicate)
+    if let Err(e) = Sworkstyle::new(args.config_path, args.deduplicate, args.focused_color)
         .run()
         .await
     {

@@ -8,6 +8,7 @@ use crate::util::prettify_option;
 mod config_error;
 
 mod parse_content_to_config;
+
 use parse_content_to_config::parse_content_to_config;
 
 pub const DEFAULT_MATCH_CONFIG: &'static [u8] = include_bytes!("../default_config.toml");
