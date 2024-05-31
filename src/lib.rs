@@ -166,8 +166,20 @@ impl Sworkstyle {
             })
             .filter(|icon| !icon.is_empty())
             // Overwrite right to left characters: https://www.unicode.org/versions/Unicode12.0.0/UnicodeStandard-12.0.pdf#G26.16327
-            .map(|icon| format!("\u{202D}{icon}\u{202C}"))
-            .collect();
+            .map(|icon| format!("\u{202D}{icon}\u{202C}"));
+
+        let icons: Vec<String> = if self.deduplicate {
+            let mut seen = HashSet::new();
+            icons_iter.filter(|icon| {
+                if seen.contains(icon) {
+                    return false;
+                }
+                seen.insert(icon.clone());
+                true
+            }).collect()
+        } else {
+            icons_iter.collect()
+        };
 
         let name = match &workspace.name {
             Some(name) => name,
