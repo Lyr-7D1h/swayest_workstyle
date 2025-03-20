@@ -150,6 +150,7 @@ async fn main() {
         .run()
         .await
     {
-        error!("{e}")
+        error!("{e}");
+        process::exit(1)
     }
 }
