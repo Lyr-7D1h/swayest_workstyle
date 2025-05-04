@@ -12,8 +12,8 @@ readme = "README.md"
 
 [dependencies]
 swayipc-async = "2.0.1"
-async-std = { version = "1.10.0", features = ["attributes"]}
-futures = "0.3.25"
+async-io = "2"
+futures-lite = "2.6"
 toml = { version = "0.8", features = ["preserve_order"] }
 dirs = "6.0"
 log =  "0.4"

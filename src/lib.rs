@@ -1,13 +1,12 @@
-use async_std::prelude::*;
-use futures::poll;
+use futures_lite::prelude::*;
+
+use async_io::Async;
+use futures_lite::stream;
 use inotify::{Inotify, WatchMask};
 use std::{
     collections::BTreeSet,
     error::Error,
     path::{Path, PathBuf},
-    task::Poll,
-    thread,
-    time::Duration,
 };
 
 use log::{debug, error, info, warn};
@@ -60,49 +59,63 @@ impl Sworkstyle {
         }
     }
 
-    pub async fn run(&mut self) -> Result<(), SworkstyleError> {
+    // Takes `self` by value because we consume `config_source`.
+    pub async fn run(mut self) -> Result<(), SworkstyleError> {
+        enum Message {
+            Event,
+            Config(Config),
+        }
+
         let mut events = Connection::new()
             .await?
             .subscribe(&[EventType::Window])
-            .await?;
+            .await?
+            .map(|r| r.map(|_| Message::Event))
+            .boxed();
         let mut connection = Connection::new().await?;
 
-        let mut inotify_events_buffer = [0; 1024];
-        loop {
-            let p = poll!(events.next());
-
-            if p.is_ready() {
-                if let Poll::Ready(Some(event)) = p {
-                    match event {
-                        Ok(_) => {
-                            if let Err(e) = self.update_workspaces(&mut connection).await {
-                                error!("Could not update workspace name: {}", e);
-                            }
-                        }
-                        Err(e) => {
-                            warn!("Connection broken, exiting: {e}");
-                            return Err(Box::new(e));
-                        }
-                    }
-                }
-            }
-
-            if let Some(source) = &mut self.config_source {
-                if let Some(inotify) = &mut source.inotify {
-                    if let Ok(_) = inotify.read_events(&mut inotify_events_buffer) {
+        if let Some(source) = self.config_source.take() {
+            if source.inotify.is_some() {
+                events = events
+                    .or(stream::try_unfold(source, move |mut source| async {
+                        let anotify = Async::new(source.inotify.take().unwrap())?;
+                        anotify.readable().await?;
+                        let mut inotify = anotify.into_inner()?;
+                        let mut inotify_events_buffer = [0; 1024];
+                        inotify.read_events(&mut inotify_events_buffer)?;
                         info!("Detected config change, reloading config..");
-                        self.config = Config::new(&Some(&source.path));
+                        let config = Config::new(&Some(&source.path));
                         // Reset watcher
                         inotify
                             .watches()
                             .add(&source.path, WatchMask::CLOSE_WRITE)
                             .expect("Failed to watch config file");
+                        source.inotify = Some(inotify);
+
+                        Ok(Some((Message::Config(config), source)))
+                    }))
+                    .boxed();
+            }
+        }
+
+        while let Some(msg) = events.next().await {
+            match msg {
+                Ok(Message::Event) => {
+                    if let Err(e) = self.update_workspaces(&mut connection).await {
+                        error!("Could not update workspace name: {}", e);
                     }
                 }
+                Ok(Message::Config(config)) => {
+                    self.config = config;
+                }
+                Err(e) => {
+                    warn!("Error while waiting for Sway or config events, exiting: {e}");
+                    return Err(Box::new(e));
+                }
             }
-
-            thread::sleep(Duration::from_millis(100));
         }
+
+        Ok(())
     }
 
     async fn update_workspaces(&self, conn: &mut Connection) -> Result<(), SworkstyleError> {
