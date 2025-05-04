@@ -36,7 +36,8 @@ impl Sworkstyle {
                     let inotify =
                         Inotify::init().expect("Error while initializing inotify instance");
                     inotify
-                        .watches().add(&path, WatchMask::CLOSE_WRITE)
+                        .watches()
+                        .add(&path, WatchMask::CLOSE_WRITE)
                         .expect("Failed to watch config file");
                     Some(inotify)
                 } else {
@@ -87,7 +88,8 @@ impl Sworkstyle {
                         self.config = Config::new(&self.config_path);
                         // Reset watcher
                         inotify
-                            .watches().add(config_path, WatchMask::CLOSE_WRITE)
+                            .watches()
+                            .add(config_path, WatchMask::CLOSE_WRITE)
                             .expect("Failed to watch config file");
                     }
                 }
@@ -187,9 +189,7 @@ impl Sworkstyle {
             icons.dedup();
         }
 
-        let delim = self.config.separator
-            .as_deref()
-            .unwrap_or(" ");
+        let delim = self.config.separator.as_deref().unwrap_or(" ");
 
         let mut icons = icons.join(delim);
 

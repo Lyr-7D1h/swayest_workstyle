@@ -1,12 +1,9 @@
-
-
-use std::{process};
-use sworkstyle::{Sworkstyle};
+use std::process;
+use sworkstyle::Sworkstyle;
 
 use fslock::LockFile;
 use log::{debug, error};
 use simple_logger::SimpleLogger;
-
 
 use std::{env, path::PathBuf};
 
