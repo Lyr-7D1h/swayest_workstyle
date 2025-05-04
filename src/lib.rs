@@ -98,6 +98,10 @@ impl Sworkstyle {
             }
         }
 
+        if let Err(e) = self.update_workspaces(&mut connection).await {
+            error!("Could not initialize workspace name: {}", e);
+        }
+
         while let Some(msg) = events.next().await {
             match msg {
                 Ok(Message::Event(Event::Window(e))) => {
