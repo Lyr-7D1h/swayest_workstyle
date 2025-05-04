@@ -10,7 +10,7 @@ use std::{
 };
 
 use log::{debug, error, info, warn};
-use swayipc_async::{Connection, EventType, Node, NodeType};
+use swayipc_async::{Connection, Event, EventType, Node, NodeType, WindowChange};
 
 pub mod config;
 mod util;
@@ -62,7 +62,7 @@ impl Sworkstyle {
     // Takes `self` by value because we consume `config_source`.
     pub async fn run(mut self) -> Result<(), SworkstyleError> {
         enum Message {
-            Event,
+            Event(Event),
             Config(Config),
         }
 
@@ -70,7 +70,7 @@ impl Sworkstyle {
             .await?
             .subscribe(&[EventType::Window])
             .await?
-            .map(|r| r.map(|_| Message::Event))
+            .map(|r| r.map(Message::Event))
             .boxed();
         let mut connection = Connection::new().await?;
 
@@ -100,11 +100,21 @@ impl Sworkstyle {
 
         while let Some(msg) = events.next().await {
             match msg {
-                Ok(Message::Event) => {
-                    if let Err(e) = self.update_workspaces(&mut connection).await {
-                        error!("Could not update workspace name: {}", e);
+                Ok(Message::Event(Event::Window(e))) => {
+                    if matches!(
+                        e.change,
+                        WindowChange::Focus
+                            | WindowChange::FullscreenMode
+                            | WindowChange::Floating
+                            | WindowChange::Urgent
+                            | WindowChange::Mark
+                    ) {
+                        // Event not relevant to us: skip the update_workspaces_call below.
+                        continue;
                     }
                 }
+                // Should not be reachable: we are only subscribed to window events.
+                Ok(Message::Event(_)) => {}
                 Ok(Message::Config(config)) => {
                     self.config = config;
                 }
@@ -112,6 +122,9 @@ impl Sworkstyle {
                     warn!("Error while waiting for Sway or config events, exiting: {e}");
                     return Err(Box::new(e));
                 }
+            }
+            if let Err(e) = self.update_workspaces(&mut connection).await {
+                error!("Could not update workspace name: {}", e);
             }
         }
 
