@@ -20,36 +20,42 @@ use config::Config;
 
 pub type SworkstyleError = Box<dyn Error>;
 
+struct ConfigSource {
+    path: PathBuf,
+    inotify: Option<Inotify>,
+}
+
+impl ConfigSource {
+    fn new(path: impl AsRef<Path>) -> ConfigSource {
+        let inotify = if path.as_ref().exists() {
+            let inotify = Inotify::init().expect("Error while initializing inotify instance");
+            inotify
+                .watches()
+                .add(&path, WatchMask::CLOSE_WRITE)
+                .expect("Failed to watch config file");
+            Some(inotify)
+        } else {
+            None
+        };
+
+        ConfigSource {
+            path: path.as_ref().to_path_buf(),
+            inotify,
+        }
+    }
+}
+
 pub struct Sworkstyle {
     config: Config,
-    config_path: Option<PathBuf>,
-    inotify: Option<Inotify>,
+    config_source: Option<ConfigSource>,
     deduplicate: bool,
 }
 
 impl Sworkstyle {
     pub fn new<P: AsRef<Path>>(config_path: Option<P>, deduplicate: bool) -> Sworkstyle {
-        let inotify = config_path
-            .as_ref()
-            .map(|path| {
-                if path.as_ref().exists() {
-                    let inotify =
-                        Inotify::init().expect("Error while initializing inotify instance");
-                    inotify
-                        .watches()
-                        .add(&path, WatchMask::CLOSE_WRITE)
-                        .expect("Failed to watch config file");
-                    Some(inotify)
-                } else {
-                    None
-                }
-            })
-            .flatten();
-
         Sworkstyle {
             config: Config::new(&config_path),
-            config_path: config_path.map(|p| p.as_ref().to_path_buf()),
-            inotify,
+            config_source: config_path.map(ConfigSource::new),
             deduplicate,
         }
     }
@@ -81,15 +87,15 @@ impl Sworkstyle {
                 }
             }
 
-            if let Some(inotify) = &mut self.inotify {
-                if let Ok(_) = inotify.read_events(&mut inotify_events_buffer) {
-                    if let Some(config_path) = &self.config_path {
+            if let Some(source) = &mut self.config_source {
+                if let Some(inotify) = &mut source.inotify {
+                    if let Ok(_) = inotify.read_events(&mut inotify_events_buffer) {
                         info!("Detected config change, reloading config..");
-                        self.config = Config::new(&self.config_path);
+                        self.config = Config::new(&Some(&source.path));
                         // Reset watcher
                         inotify
                             .watches()
-                            .add(config_path, WatchMask::CLOSE_WRITE)
+                            .add(&source.path, WatchMask::CLOSE_WRITE)
                             .expect("Failed to watch config file");
                     }
                 }
