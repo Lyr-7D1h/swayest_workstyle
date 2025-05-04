@@ -33,10 +33,10 @@ impl Sworkstyle {
             .as_ref()
             .map(|path| {
                 if path.as_ref().exists() {
-                    let mut inotify =
+                    let inotify =
                         Inotify::init().expect("Error while initializing inotify instance");
                     inotify
-                        .add_watch(&path, WatchMask::CLOSE_WRITE)
+                        .watches().add(&path, WatchMask::CLOSE_WRITE)
                         .expect("Failed to watch config file");
                     Some(inotify)
                 } else {
@@ -87,7 +87,7 @@ impl Sworkstyle {
                         self.config = Config::new(&self.config_path);
                         // Reset watcher
                         inotify
-                            .add_watch(config_path, WatchMask::CLOSE_WRITE)
+                            .watches().add(config_path, WatchMask::CLOSE_WRITE)
                             .expect("Failed to watch config file");
                     }
                 }

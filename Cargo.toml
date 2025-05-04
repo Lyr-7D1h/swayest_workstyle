@@ -14,11 +14,11 @@ readme = "README.md"
 swayipc-async = "2.0.1"
 async-std = { version = "1.10.0", features = ["attributes"]}
 futures = "0.3.25"
-toml = { version = "0.5.8", features = ["preserve_order"] }
-dirs = "4.0"
+toml = { version = "0.8", features = ["preserve_order"] }
+dirs = "6.0"
 log =  "0.4"
 fslock = "0.2.1"
 ctrlc = "3.1.9"
 regex = "1.5.4"
-simple_logger = "2.1.0"
-inotify = "0.10.0"
+simple_logger = "5"
+inotify = "0.11"
