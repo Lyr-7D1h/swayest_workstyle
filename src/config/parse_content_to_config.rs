@@ -125,10 +125,11 @@ fn test_parse_content_to_config() {
     a = b
     ";
     let invalid_match = parse_content_to_config(&content.to_string());
-    assert!(invalid_match
-        .unwrap_err()
-        .to_string()
-        .starts_with("invalid TOML value"));
+    let e = invalid_match.unwrap_err();
+    assert!(
+        e.to_string().starts_with("TOML parse error"),
+        "error message not as expected: {e:?}"
+    );
 
     let content = "
     [matching]
