@@ -74,26 +74,28 @@ impl Sworkstyle {
             .boxed();
         let mut connection = Connection::new().await?;
 
-        if let Some(source) = self.config_source.take() {
-            if source.inotify.is_some() {
+        if let Some(mut source) = self.config_source.take() {
+            if let Some(inotify) = source.inotify.take() {
                 events = events
-                    .or(stream::try_unfold(source, move |mut source| async {
-                        let anotify = Async::new(source.inotify.take().unwrap())?;
-                        anotify.readable().await?;
-                        let mut inotify = anotify.into_inner()?;
-                        let mut inotify_events_buffer = [0; 1024];
-                        inotify.read_events(&mut inotify_events_buffer)?;
-                        info!("Detected config change, reloading config..");
-                        let config = Config::new(&Some(&source.path));
-                        // Reset watcher
-                        inotify
-                            .watches()
-                            .add(&source.path, WatchMask::CLOSE_WRITE)
-                            .expect("Failed to watch config file");
-                        source.inotify = Some(inotify);
+                    .or(stream::try_unfold(
+                        (source.path, inotify),
+                        |(path, inotify)| async {
+                            let anotify = Async::new(inotify)?;
+                            anotify.readable().await?;
+                            let mut inotify = anotify.into_inner()?;
+                            let mut inotify_events_buffer = [0; 1024];
+                            inotify.read_events(&mut inotify_events_buffer)?;
+                            info!("Detected config change, reloading config..");
+                            let config = Config::new(&Some(&path));
+                            // Reset watcher
+                            inotify
+                                .watches()
+                                .add(&path, WatchMask::CLOSE_WRITE)
+                                .expect("Failed to watch config file");
 
-                        Ok(Some((Message::Config(config), source)))
-                    }))
+                            Ok(Some((Message::Config(config), (path, inotify))))
+                        },
+                    ))
                     .boxed();
             }
         }
