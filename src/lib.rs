@@ -21,21 +21,16 @@ pub type SworkstyleError = Box<dyn Error>;
 
 struct ConfigSource {
     path: PathBuf,
-    inotify: Option<Inotify>,
+    inotify: Inotify,
 }
 
 impl ConfigSource {
     fn new(path: impl AsRef<Path>) -> ConfigSource {
-        let inotify = if path.as_ref().exists() {
-            let inotify = Inotify::init().expect("Error while initializing inotify instance");
-            inotify
-                .watches()
-                .add(&path, WatchMask::CLOSE_WRITE)
-                .expect("Failed to watch config file");
-            Some(inotify)
-        } else {
-            None
-        };
+        let inotify = Inotify::init().expect("Error while initializing inotify instance");
+        inotify
+            .watches()
+            .add(&path, WatchMask::CLOSE_WRITE)
+            .expect("Failed to watch config file");
 
         ConfigSource {
             path: path.as_ref().to_path_buf(),
@@ -52,9 +47,12 @@ pub struct Sworkstyle {
 
 impl Sworkstyle {
     pub fn new<P: AsRef<Path>>(config_path: Option<P>, deduplicate: bool) -> Sworkstyle {
+        let config = Config::new(&config_path);
+        let config_source =
+            config_path.and_then(|path| path.as_ref().exists().then(|| ConfigSource::new(path)));
         Sworkstyle {
-            config: Config::new(&config_path),
-            config_source: config_path.map(ConfigSource::new),
+            config,
+            config_source,
             deduplicate,
         }
     }
@@ -74,30 +72,29 @@ impl Sworkstyle {
             .boxed();
         let mut connection = Connection::new().await?;
 
-        if let Some(mut source) = self.config_source.take() {
-            if let Some(inotify) = source.inotify.take() {
-                events = events
-                    .or(stream::try_unfold(
-                        (source.path, inotify),
-                        |(path, inotify)| async {
-                            let anotify = Async::new(inotify)?;
-                            anotify.readable().await?;
-                            let mut inotify = anotify.into_inner()?;
-                            let mut inotify_events_buffer = [0; 1024];
-                            inotify.read_events(&mut inotify_events_buffer)?;
-                            info!("Detected config change, reloading config..");
-                            let config = Config::new(&Some(&path));
-                            // Reset watcher
-                            inotify
-                                .watches()
-                                .add(&path, WatchMask::CLOSE_WRITE)
-                                .expect("Failed to watch config file");
+        if let Some(source) = self.config_source.take() {
+            events = events
+                .or(stream::try_unfold(source, |source| async {
+                    let path = source.path;
+                    let anotify = Async::new(source.inotify)?;
+                    anotify.readable().await?;
+                    let mut inotify = anotify.into_inner()?;
+                    let mut inotify_events_buffer = [0; 1024];
+                    inotify.read_events(&mut inotify_events_buffer)?;
+                    info!("Detected config change, reloading config..");
+                    let config = Config::new(&Some(&path));
+                    // Reset watcher
+                    inotify
+                        .watches()
+                        .add(&path, WatchMask::CLOSE_WRITE)
+                        .expect("Failed to watch config file");
 
-                            Ok(Some((Message::Config(config), (path, inotify))))
-                        },
-                    ))
-                    .boxed();
-            }
+                    Ok(Some((
+                        Message::Config(config),
+                        ConfigSource { path, inotify },
+                    )))
+                }))
+                .boxed();
         }
 
         if let Err(e) = self.update_workspaces(&mut connection).await {
