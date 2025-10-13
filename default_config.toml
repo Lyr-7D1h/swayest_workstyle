@@ -55,6 +55,7 @@ separator = ' '
 'jetbrains-studio' = ''
 "transmission-remote-gtk" = ""
 'Spotify' = ''
+'spotify' = ''
 'GitHub Desktop' = ''
 '/(?i)^Github.*Firefox/' = ''
 'firefox' = ''
