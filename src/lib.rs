@@ -1,17 +1,16 @@
-use async_std::prelude::*;
-use futures::poll;
+use futures_lite::prelude::*;
+
+use async_io::Async;
+use futures_lite::stream;
 use inotify::{Inotify, WatchMask};
 use std::{
     collections::BTreeSet,
     error::Error,
     path::{Path, PathBuf},
-    task::Poll,
-    thread,
-    time::Duration,
 };
 
 use log::{debug, error, info, warn};
-use swayipc_async::{Connection, EventType, Node, NodeType};
+use swayipc_async::{Connection, Event, EventType, Node, NodeType, WindowChange};
 
 pub mod config;
 mod util;
@@ -20,81 +19,119 @@ use config::Config;
 
 pub type SworkstyleError = Box<dyn Error>;
 
+struct ConfigSource {
+    path: PathBuf,
+    inotify: Inotify,
+}
+
+impl ConfigSource {
+    fn new(path: impl AsRef<Path>) -> ConfigSource {
+        let inotify = Inotify::init().expect("Error while initializing inotify instance");
+        inotify
+            .watches()
+            .add(&path, WatchMask::CLOSE_WRITE)
+            .expect("Failed to watch config file");
+
+        ConfigSource {
+            path: path.as_ref().to_path_buf(),
+            inotify,
+        }
+    }
+}
+
 pub struct Sworkstyle {
     config: Config,
-    config_path: Option<PathBuf>,
-    inotify: Option<Inotify>,
+    config_source: Option<ConfigSource>,
     deduplicate: bool,
 }
 
 impl Sworkstyle {
     pub fn new<P: AsRef<Path>>(config_path: Option<P>, deduplicate: bool) -> Sworkstyle {
-        let inotify = config_path
-            .as_ref()
-            .map(|path| {
-                if path.as_ref().exists() {
-                    let mut inotify =
-                        Inotify::init().expect("Error while initializing inotify instance");
-                    inotify
-                        .add_watch(&path, WatchMask::CLOSE_WRITE)
-                        .expect("Failed to watch config file");
-                    Some(inotify)
-                } else {
-                    None
-                }
-            })
-            .flatten();
-
+        let config = Config::new(&config_path);
+        let config_source =
+            config_path.and_then(|path| path.as_ref().exists().then(|| ConfigSource::new(path)));
         Sworkstyle {
-            config: Config::new(&config_path),
-            config_path: config_path.map(|p| p.as_ref().to_path_buf()),
-            inotify,
+            config,
+            config_source,
             deduplicate,
         }
     }
 
-    pub async fn run(&mut self) -> Result<(), SworkstyleError> {
+    // Takes `self` by value because we consume `config_source`.
+    pub async fn run(mut self) -> Result<(), SworkstyleError> {
+        enum Message {
+            Event(Event),
+            Config(Config),
+        }
+
         let mut events = Connection::new()
             .await?
             .subscribe(&[EventType::Window])
-            .await?;
+            .await?
+            .map(|r| r.map(Message::Event))
+            .boxed();
         let mut connection = Connection::new().await?;
 
-        let mut inotify_events_buffer = [0; 1024];
-        loop {
-            let p = poll!(events.next());
+        if let Some(source) = self.config_source.take() {
+            events = events
+                .or(stream::try_unfold(source, |source| async {
+                    let path = source.path;
+                    let anotify = Async::new(source.inotify)?;
+                    anotify.readable().await?;
+                    let mut inotify = anotify.into_inner()?;
+                    let mut inotify_events_buffer = [0; 1024];
+                    inotify.read_events(&mut inotify_events_buffer)?;
+                    info!("Detected config change, reloading config..");
+                    let config = Config::new(&Some(&path));
+                    // Reset watcher
+                    inotify
+                        .watches()
+                        .add(&path, WatchMask::CLOSE_WRITE)
+                        .expect("Failed to watch config file");
 
-            if p.is_ready() {
-                if let Poll::Ready(Some(event)) = p {
-                    match event {
-                        Ok(_) => {
-                            if let Err(e) = self.update_workspaces(&mut connection).await {
-                                error!("Could not update workspace name: {}", e);
-                            }
-                        }
-                        Err(e) => {
-                            warn!("Connection broken, exiting: {e}");
-                            return Err(Box::new(e));
-                        }
-                    }
-                }
-            }
-
-            if let Some(inotify) = &mut self.inotify {
-                if let Ok(_) = inotify.read_events(&mut inotify_events_buffer) {
-                    if let Some(config_path) = &self.config_path {
-                        info!("Detected config change, reloading config..");
-                        self.config = Config::new(&self.config_path);
-                        // Reset watcher
-                        inotify
-                            .add_watch(config_path, WatchMask::CLOSE_WRITE)
-                            .expect("Failed to watch config file");
-                    }
-                }
-            }
-
-            thread::sleep(Duration::from_millis(100));
+                    Ok(Some((
+                        Message::Config(config),
+                        ConfigSource { path, inotify },
+                    )))
+                }))
+                .boxed();
         }
+
+        if let Err(e) = self.update_workspaces(&mut connection).await {
+            error!("Could not initialize workspace name: {}", e);
+        }
+
+        while let Some(msg) = events.next().await {
+            match msg {
+                Ok(Message::Event(Event::Window(e))) => {
+                    if matches!(
+                        e.change,
+                        WindowChange::Focus
+                            | WindowChange::FullscreenMode
+                            | WindowChange::Floating
+                            | WindowChange::Urgent
+                            | WindowChange::Mark
+                    ) {
+                        // Event not relevant to us: skip the update_workspaces_call below.
+                        continue;
+                    }
+                }
+                // Should not be reachable: we are only subscribed to window events.
+                Ok(Message::Event(_)) => {}
+                Ok(Message::Config(config)) => {
+                    self.config = config;
+                }
+                Err(e) => {
+                    warn!("Error while waiting for Sway or config events, exiting: {e}");
+                    return Err(Box::new(e));
+                }
+            }
+            if let Err(e) = self.update_workspaces(&mut connection).await {
+                error!("Could not update workspace name: {}", e);
+            }
+        }
+
+        Ok(())
     }
 
     async fn update_workspaces(&self, conn: &mut Connection) -> Result<(), SworkstyleError> {
@@ -187,9 +224,7 @@ impl Sworkstyle {
             icons.dedup();
         }
 
-        let delim = self.config.separator
-            .as_deref()
-            .unwrap_or(" ");
+        let delim = self.config.separator.as_deref().unwrap_or(" ");
 
         let mut icons = icons.join(delim);
 

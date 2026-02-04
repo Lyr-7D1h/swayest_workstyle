@@ -1,12 +1,9 @@
-
-
-use std::{process};
-use sworkstyle::{Sworkstyle};
+use std::process;
+use sworkstyle::Sworkstyle;
 
 use fslock::LockFile;
 use log::{debug, error};
 use simple_logger::SimpleLogger;
-
 
 use std::{env, path::PathBuf};
 
@@ -135,8 +132,7 @@ fn acquire_lock() {
     .expect("Could not set ctrlc handler")
 }
 
-#[async_std::main]
-async fn main() {
+fn main() {
     let args = Args::from_cli();
 
     SimpleLogger::new()
@@ -146,10 +142,8 @@ async fn main() {
 
     acquire_lock();
 
-    if let Err(e) = Sworkstyle::new(args.config_path, args.deduplicate)
-        .run()
-        .await
-    {
+    let app = Sworkstyle::new(args.config_path, args.deduplicate);
+    if let Err(e) = async_io::block_on(app.run()) {
         error!("{e}");
         process::exit(1)
     }
