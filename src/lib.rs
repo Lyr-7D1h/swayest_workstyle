@@ -155,51 +155,35 @@ impl Sworkstyle {
         let mut windows = vec![];
         get_windows(workspace, &mut windows);
 
-        let mut window_names: Vec<(Option<&String>, Option<String>)> = windows
+        let mut window_names: Vec<(Option<&String>, Option<&String>, Option<String>)> = windows
             .iter()
             .map(|node| {
-                let mut exact_name: Option<&String> = None;
-
                 // Wayland Exact app
-                if let Some(app_id) = &node.app_id {
-                    exact_name = Some(app_id);
-                }
+                let app_id = node.app_id.as_ref();
 
                 // X11 Exact
-                if let Some(window_props) = &node.window_properties {
-                    if let Some(class) = &window_props.class {
-                        exact_name = Some(class);
-                    }
-                }
+                let class = node.window_properties.as_ref().and_then(|props| props.class.as_ref());
 
-                (exact_name, node.name.clone())
+                (app_id, class, node.name.clone())
             })
             .collect();
 
         if self.deduplicate {
             window_names = window_names
                 .into_iter()
-                .collect::<BTreeSet<(Option<&String>, Option<String>)>>()
+                .collect::<BTreeSet<(Option<&String>, Option<&String>, Option<String>)>>()
                 .into_iter()
                 .collect();
         }
 
         let mut icons: Vec<String> = window_names
             .into_iter()
-            .map(|(exact_name, generic_name)| {
-                if let Some(exact_name) = exact_name {
-                    self.config
-                        .fetch_icon(exact_name, generic_name.as_ref())
-                        .to_string()
-                } else {
-                    error!(
-                        "No exact name found for window with title={:?}",
-                        generic_name
-                    );
-                    self.config
-                        .fetch_icon(&String::new(), generic_name.as_ref())
-                        .to_string()
+            .map(|(app_id, class, title)| {
+                if app_id.is_none() && class.is_none() {
+                    error!("No app_id/class found for window with title={:?}", title);
                 }
+
+                self.config.fetch_icon(app_id, class, title.as_ref()).to_string()
             })
             .filter(|icon| !icon.is_empty())
             // Overwrite right to left characters: https://www.unicode.org/versions/Unicode12.0.0/UnicodeStandard-12.0.pdf#G26.16327

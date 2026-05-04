@@ -48,6 +48,12 @@ impl TryFrom<String> for Pattern {
 pub enum Match {
     Generic { pattern: Pattern, value: String },
     Exact { pattern: String, value: String },
+    Window {
+        app_id: Option<Pattern>,
+        class: Option<Pattern>,
+        title: Option<Pattern>,
+        value: String,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -76,27 +82,65 @@ impl Config {
         return Config::default();
     }
 
-    pub fn fetch_icon(&self, exact_name: &String, generic_name: Option<&String>) -> String {
+    fn matches_generic_pattern(pattern: &Pattern, value: &String) -> bool {
+        match pattern {
+            Pattern::Regex(r) => r.is_match(value),
+            Pattern::String(p) => value.to_lowercase().contains(&p.to_lowercase()),
+        }
+    }
+
+    fn matches_exact_pattern(pattern: &Pattern, value: &String) -> bool {
+        match pattern {
+            Pattern::Regex(r) => r.is_match(value),
+            Pattern::String(p) => value == p,
+        }
+    }
+
+    pub fn fetch_icon(
+        &self,
+        app_id: Option<&String>,
+        class: Option<&String>,
+        title: Option<&String>,
+    ) -> String {
         for m in &self.matchings {
             match m {
                 Match::Generic { pattern, value } => {
-                    if let Some(generic_name) = &generic_name {
-                        match pattern {
-                            Pattern::Regex(r) => {
-                                if r.is_match(generic_name) {
-                                    return value.clone();
-                                }
-                            }
-                            Pattern::String(p) => {
-                                if generic_name.to_lowercase().contains(&p.to_lowercase()) {
-                                    return value.clone();
-                                }
-                            }
+                    if let Some(title) = &title {
+                        if Self::matches_generic_pattern(pattern, title) {
+                            return value.clone();
                         }
                     }
                 }
                 Match::Exact { pattern, value } => {
-                    if exact_name == pattern {
+                    if let Some(exact_name) = app_id.or(class) {
+                        if exact_name == pattern {
+                            return value.clone();
+                        }
+                    }
+                }
+                Match::Window {
+                    app_id: app_id_pattern,
+                    class: class_pattern,
+                    title: title_pattern,
+                    value,
+                } => {
+                    let app_id_matches = app_id_pattern.as_ref().map_or(true, |pattern| {
+                        app_id
+                            .as_ref()
+                            .is_some_and(|app_id| Self::matches_exact_pattern(pattern, app_id))
+                    });
+                    let class_matches = class_pattern.as_ref().map_or(true, |pattern| {
+                        class
+                            .as_ref()
+                            .is_some_and(|class| Self::matches_exact_pattern(pattern, class))
+                    });
+                    let title_matches = title_pattern.as_ref().map_or(true, |pattern| {
+                        title
+                            .as_ref()
+                            .is_some_and(|title| Self::matches_generic_pattern(pattern, title))
+                    });
+
+                    if app_id_matches && class_matches && title_matches {
                         return value.clone();
                     }
                 }
@@ -104,9 +148,10 @@ impl Config {
         }
 
         warn!(
-            "No match for \"{}\" with title \"{}\"",
-            exact_name,
-            prettify_option(generic_name),
+            "No match for app_id=\"{}\" class=\"{}\" title=\"{}\"",
+            prettify_option(app_id),
+            prettify_option(class),
+            prettify_option(title),
         );
 
         self.fallback()
@@ -185,7 +230,39 @@ fn test_from_string() {
 
     assert_eq!(config.fallback(), "c");
     assert_eq!(
-        config.fetch_icon(&String::from("application"), Some(&String::from("a title"))),
+        config.fetch_icon(
+            Some(&String::from("application")),
+            None,
+            Some(&String::from("a title"))
+        ),
         "d"
+    );
+}
+
+#[test]
+fn test_window_match() {
+    let config = Config::from(
+        "
+    fallback = 'x'
+    [matching]
+    steam_eve = { app_id = 'steam', title = '/Eve/', value = 's' }
+    ",
+    );
+
+    assert_eq!(
+        config.fetch_icon(
+            Some(&String::from("steam")),
+            None,
+            Some(&String::from("Eve Online"))
+        ),
+        "s"
+    );
+    assert_eq!(
+        config.fetch_icon(
+            Some(&String::from("steam")),
+            None,
+            Some(&String::from("Counter-Strike"))
+        ),
+        "x"
     );
 }
