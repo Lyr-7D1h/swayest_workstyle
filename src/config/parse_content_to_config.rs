@@ -14,9 +14,9 @@ fn parse_pattern_field(
                 .as_str()
                 .ok_or(ConfigError::new(format!("Value of {key} is not a string")))?;
 
-            Ok(Some(Pattern::try_from(value.to_string()).or(Err(
-                ConfigError::new(format!("Invalid pattern given: {value}")),
-            ))?))
+            Ok(Some(Pattern::try_from(value.to_string()).map_err(|e| {
+                ConfigError::new(format!("Invalid pattern given for '{value}': {e}"))
+            })?))
         }
         None => Ok(None),
     }
@@ -29,10 +29,10 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
     let map_to_match = |k: (&String, &Value)| -> Result<Match, ConfigError> {
         if let Some(value) = k.1.as_str() {
             let value = value.to_string();
-            let pattern = Pattern::try_from(k.0.to_string()).or(Err(ConfigError::new(format!(
-                "Invalid pattern given: {}",
-                k.0
-            ))))?;
+            let pattern = Pattern::try_from(k.0.to_string()).map_err(|e| ConfigError::new(format!(
+                "Invalid pattern given for '{}': {}",
+                k.0, e
+            )))?;
 
             match pattern {
                 Pattern::Regex(_) => return Ok(Match::Generic { pattern, value }),
@@ -63,10 +63,9 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
                         value,
                     },
                     "generic" => Match::Generic {
-                        pattern: Pattern::try_from(k.0.to_string()).or(Err(ConfigError::new(
-                            format!("Invalid pattern given: {}", k.0),
-                        )))?,
-
+                        pattern: Pattern::try_from(k.0.to_string()).map_err(|e| ConfigError::new(
+                            format!("Invalid pattern given for '{}': {}", k.0, e),
+                        ))?,
                         value,
                     },
                     _ => return Err(ConfigError::new(format!("Invalid match type: {}", k.1))),

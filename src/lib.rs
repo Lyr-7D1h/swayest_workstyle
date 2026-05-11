@@ -182,8 +182,7 @@ impl Sworkstyle {
                 if app_id.is_none() && class.is_none() {
                     error!("No app_id/class found for window with title={:?}", title);
                 }
-
-                self.config.fetch_icon(app_id, class, title.as_ref()).to_string()
+                self.config.fetch_icon(app_id, class, title.as_ref())
             })
             .filter(|icon| !icon.is_empty())
             // Overwrite right to left characters: https://www.unicode.org/versions/Unicode12.0.0/UnicodeStandard-12.0.pdf#G26.16327

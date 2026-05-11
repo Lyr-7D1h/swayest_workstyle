@@ -122,10 +122,11 @@ _**Note:**_ You'll only have to use the verbose format when matching generic wit
 
 #### Troubleshooting
 
+
 If it couldn't match something it will print:
 
 ```
-WARN [sworkstyle:config] No match for '{app_name}' with title '{title}'
+WARN [sworkstyle:config] No match for app_id="{app_id}" class="{class}" title="{title}"
 ```
 
 You can use {title} to do a generic matching
