@@ -112,8 +112,13 @@ impl Config {
                     }
                 }
                 Match::Exact { pattern, value } => {
-                    if let Some(exact_name) = app_id.or(class) {
-                        if exact_name == pattern {
+                    if let Some(class_name) = class {
+                        if class_name == pattern {
+                            return value.clone();
+                        }
+                    }
+                    if let Some(app_id_name) = app_id {
+                        if app_id_name == pattern {
                             return value.clone();
                         }
                     }
