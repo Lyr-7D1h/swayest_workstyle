@@ -105,14 +105,28 @@ For a reference to the regex syntax see the [regex](https://docs.rs/regex/1.5.4/
 '{pattern}' = { type = 'generic' | 'exact', value = '{icon}' }
 ```
 
+#### Combined Fields
+
+```toml
+'{name}' = { app_id = 'steam', title = '/Eve/', value = '{icon}' }
+```
+
+`{name}` is only a TOML key/identifier for the entry. It is not used for matching logic.
+Use any descriptive unique name (for example `steam_eve` or `browser_github`).
+
+All specified fields must match. You can combine any of `app_id`, `class`, and `title`.
+`title` supports the same matching behavior as generic rules (substring or regex with `/.../`).
+`app_id` and `class` support exact string matching or regex when wrapped in `/.../`.
+
 _**Note:**_ You'll only have to use the verbose format when matching generic with a case insensitive text. `'case insensitive title' = { type = 'generic', value = 'A' }`
 
 #### Troubleshooting
 
+
 If it couldn't match something it will print:
 
 ```
-WARN [sworkstyle:config] No match for '{app_name}' with title '{title}'
+WARN [sworkstyle:config] No match for app_id="{app_id}" class="{class}" title="{title}"
 ```
 
 You can use {title} to do a generic matching

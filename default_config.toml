@@ -14,13 +14,20 @@
 # 
 #	'{pattern}' = { type = 'generic' | 'exact', value = '{icon}' }
 #
+# combined window matcher format:
 #
+#	'{name}' = { app_id = 'steam', title = '/Eve/', value = '{icon}' }
+#
+# It matches when all specified fields match. You can combine any of app_id, class and title.
+#
+#
+
 # If it couldn't match something it will print:
 # 
-# WARN [sworkstyle:config] No match for '{app_name}' with title '{title}' 
+# WARN [sworkstyle:config] No match for app_id="{app_id}" class="{class}" title="{title}"
 #
 # You can use {title} to do a generic matching 
-# You can use {app_name} to do an exact match
+# You can use {app_id} to do an exact match
 
 fallback = ''
 separator = ' '

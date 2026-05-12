@@ -4,6 +4,24 @@ use toml::Value;
 
 use super::{config_error::ConfigError, Config, Match, Pattern};
 
+fn parse_pattern_field(
+    table: &toml::map::Map<String, Value>,
+    key: &str,
+) -> Result<Option<Pattern>, ConfigError> {
+    match table.get(key) {
+        Some(value) => {
+            let value = value
+                .as_str()
+                .ok_or(ConfigError::new(format!("Value of {key} is not a string")))?;
+
+            Ok(Some(Pattern::try_from(value.to_string()).map_err(|e| {
+                ConfigError::new(format!("Invalid pattern given for '{value}': {e}"))
+            })?))
+        }
+        None => Ok(None),
+    }
+}
+
 /// Parse toml config content to icon_map
 pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> {
     let map: Value = toml::from_str(content)?;
@@ -11,10 +29,10 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
     let map_to_match = |k: (&String, &Value)| -> Result<Match, ConfigError> {
         if let Some(value) = k.1.as_str() {
             let value = value.to_string();
-            let pattern = Pattern::try_from(k.0.to_string()).or(Err(ConfigError::new(format!(
-                "Invalid pattern given: {}",
-                k.0
-            ))))?;
+            let pattern = Pattern::try_from(k.0.to_string()).map_err(|e| ConfigError::new(format!(
+                "Invalid pattern given for '{}': {}",
+                k.0, e
+            )))?;
 
             match pattern {
                 Pattern::Regex(_) => return Ok(Match::Generic { pattern, value }),
@@ -23,15 +41,6 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
         }
 
         if let Some(table) = k.1.as_table() {
-            let match_type = table
-                .get("type")
-                .ok_or(ConfigError::new(format!("Could not parse: {}", k.0)))?
-                .as_str()
-                .ok_or(ConfigError::new(format!(
-                    "Value of {} is not a string",
-                    k.0
-                )))?;
-
             let value = table
                 .get("value")
                 .ok_or(ConfigError::new(format!("Could not parse: {}", k.0)))?
@@ -42,22 +51,46 @@ pub fn parse_content_to_config(content: &String) -> Result<Config, ConfigError> 
                 )))?
                 .to_string();
 
-            let m = match &match_type[..] {
-                "exact" => Match::Exact {
-                    pattern: k.0.to_string(),
-                    value,
-                },
-                "generic" => Match::Generic {
-                    pattern: Pattern::try_from(k.0.to_string()).or(Err(ConfigError::new(
-                        format!("Invalid pattern given: {}", k.0),
-                    )))?,
+            if let Some(match_type) = table.get("type") {
+                let match_type = match_type.as_str().ok_or(ConfigError::new(format!(
+                    "Value of {} is not a string",
+                    k.0
+                )))?;
 
-                    value,
-                },
-                _ => return Err(ConfigError::new(format!("Invalid match type: {}", k.1))),
-            };
+                let m = match &match_type[..] {
+                    "exact" => Match::Exact {
+                        pattern: k.0.to_string(),
+                        value,
+                    },
+                    "generic" => Match::Generic {
+                        pattern: Pattern::try_from(k.0.to_string()).map_err(|e| ConfigError::new(
+                            format!("Invalid pattern given for '{}': {}", k.0, e),
+                        ))?,
+                        value,
+                    },
+                    _ => return Err(ConfigError::new(format!("Invalid match type: {}", k.1))),
+                };
 
-            return Ok(m);
+                return Ok(m);
+            }
+
+            let app_id = parse_pattern_field(table, "app_id")?;
+            let class = parse_pattern_field(table, "class")?;
+            let title = parse_pattern_field(table, "title")?;
+
+            if app_id.is_none() && class.is_none() && title.is_none() {
+                return Err(ConfigError::new(format!(
+                    "Could not parse: {}. Expected one of app_id, class or title",
+                    k.0
+                )));
+            }
+
+            return Ok(Match::Window {
+                app_id,
+                class,
+                title,
+                value,
+            });
         }
 
         Err(ConfigError::new(format!(
@@ -167,6 +200,21 @@ fn test_parse_content_to_config() {
         Match::Exact {
             value: "d".to_string(),
             pattern: "qwer".to_string()
+        }
+    );
+
+    let content = "
+    [matching]
+    steam_eve = { app_id = 'steam', title = '/Eve/', value = 'steam-icon' }
+    ";
+    let icon_map = parse_content_to_config(&content.to_string()).unwrap();
+    assert_eq!(
+        icon_map.matchings[0],
+        Match::Window {
+            app_id: Some(Pattern::String("steam".to_string())),
+            class: None,
+            title: Some(Pattern::Regex(Regex::new("Eve").unwrap())),
+            value: "steam-icon".to_string(),
         }
     );
 }
